@@ -1,0 +1,83 @@
+
+Recrep Engine
+- Empfängt Json Objekte von recordern. Inhalt: Header und Payload. Serialisiert mit kryo und schreibt ins recording.log
+- Liest aufgezeichnete Recordings und sendet Json Objekte zu replayern. Inhalt: Timestamp, Key?, und Payload. Deserialisiert mit kryo und sendet den event ans gewünschte Ziel.
+- Versendet replay Events wie gewünscht: alle gleich nacheinander, in der gleichen zeitlichen abfolge wie sie aufgezeichnet wurden, oder um einen faktor beschleunigt, bzw. verlangsamt
+- Routet Commands zum Starten von Records und Replays, etc. (Rest API, Ws API)
+
+
+Recrep Cockpit
+- unterstützt den Anwender beim erstellen von Record aufträgen
+- überwachen von laufenden Record aufträgen
+- unterstützt den Anwender beim erstellen von Replay aufträgen
+- überwachen von laufenden Replay aufträgen
+
+JMS Recorder
+- Empfängt Kommando von Engine und registriert sich als dynamischer subscriber an der topic Quelle
+- Basiert auf JMS API 1.1 und verwendet einen Umgebungsspezifischen JMS-Client für den Aufbau der Verbindung. SPI?
+- Empfängt beliebige Events von der Quelle. Verpackt diese in ein JsonObjekt: header, payload, etc. und sendet sie an die engine
+- Behandlung von BackPressure
+
+JMS Replayer
+- Empfängt Kommando von Engine und registriert sich als dynamischer publisher am Ziel topic / an der Ziel queue
+- Basiert auf JMS API 1.1 und verwendet einen Umgebungsspezifischen JMS-Client für den Aufbau der Verbindung. SPI?
+- Empfängt aufgezeichnete Event von der Engine und versendet sie erneut an das gewünschte Ziel
+- Behandlung von BackPressure
+
+Recording Browser
+-
+
+Recording Analyser
+-
+
+
+
+--------
+
+Record Job
+- id
+- name
+- description
+- status
+- sources
+    - TEST_JMS_TOPIC_PPLAN
+    - TEST_JMS_TOPIC_PROGNOSE
+    - TEST_JMS_TOPIC_ISTZEIT
+    - TEST_JMS_TOPIC_DISPO
+- timestampStart
+- timestampEnd
+- maxFileSizeMb
+
+Replay Job
+- id
+- name
+- description
+- status
+- recordJobName
+- targetMapping (Object)
+    - TEST_JMS_QUEUE_PPLAN
+    - TEST_JMS_QUEUE_PROGNOSE
+    - TEST_JMS_QUEUE_ISTZEIT
+    - TEST_JMS_QUEUE_DISPO
+- speedFactor
+- timestampFrom
+- timestampTo
+
+Recrep Configuration
+- sources
+    - name
+    - description
+    - adapter
+    - properties
+- targets
+    - name
+    - description
+    - adapter
+    - properties
+
+API
+
+/sources
+/targets
+/recordjobs
+/replayjobs
