@@ -7,12 +7,15 @@ import de.iothings.recrep.stream.RecordReadStream;
 import de.iothings.recrep.stream.TimelineWriteStream;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
+import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.streams.Pump;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Stream;
 
 /**
@@ -24,6 +27,7 @@ public class Replayer extends AbstractVerticle {
 
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;
+    private List<MessageConsumer> messageConsumerList = new ArrayList<>();
 
     private final Handler<JsonObject> startReplayJobHandler = event -> { startReplayJob(event); };
     private final Handler<Throwable> exceptionHandler = throwable -> { log.error(throwable.getMessage()); };
@@ -31,19 +35,20 @@ public class Replayer extends AbstractVerticle {
 
     @Override
     public void start() throws Exception {
-
         eventPublisher = new EventPublisher(vertx);
         eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
         subscribeToReqrepEvents();
+        log.info("Started " + this.getClass().getName());
     }
 
     @Override
     public void stop() throws Exception {
-
+        messageConsumerList.forEach(MessageConsumer::unregister);
+        log.info("Stopped " + this.getClass().getName());
     }
 
     private void subscribeToReqrepEvents() {
-        eventSubscriber.subscribe(startReplayJobHandler, RecrepEventType.REPLAYSTREAM_CREATED);
+        messageConsumerList.add(eventSubscriber.subscribe(startReplayJobHandler, RecrepEventType.REPLAYSTREAM_CREATED));
     }
 
     private void startReplayJob(JsonObject event) {

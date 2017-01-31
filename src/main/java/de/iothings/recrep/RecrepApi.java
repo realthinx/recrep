@@ -16,11 +16,15 @@ import io.vertx.ext.web.handler.sockjs.BridgeEventType;
 import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by johannes on 27.12.16.
  */
 public class RecrepApi extends AbstractVerticle {
+
+    private static final Logger log = LoggerFactory.getLogger(RecrepApi.class.getName());
 
     private static EventPublisher eventPublisher;
 
@@ -152,6 +156,8 @@ public class RecrepApi extends AbstractVerticle {
 
 
         server.requestHandler(router::accept).listen(8080);
+
+        log.info("Started " + this.getClass().getName());
     }
 
     @Override

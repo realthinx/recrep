@@ -36,6 +36,10 @@ public class RecrepEmbedded {
         deployNext(deploymentFinished);
     }
 
+    public void deploy() {
+        deployNext(null);
+    }
+
     private void deployNext(Handler<AsyncResultHandler<Void>> deploymentFinished) {
         Handler<AsyncResult<String>> deployNextHandler = stringAsyncResult -> deployNext(deploymentFinished);
         if(orderedDeployables.size() > deploymentIndex) {

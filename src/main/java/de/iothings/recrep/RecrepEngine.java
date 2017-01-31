@@ -19,8 +19,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 
 public class RecrepEngine extends AbstractVerticle {
 
@@ -34,28 +36,28 @@ public class RecrepEngine extends AbstractVerticle {
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;
 
+    private List<MessageConsumer> messageConsumerList = new ArrayList<>();
+
     @Override
     public void start() throws Exception {
-
-        log.info("started RecrepEngine");
         eventPublisher = new EventPublisher(vertx);
         eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
         subscribeToReqrepEvents();
+        log.info("Started " + this.getClass().getName());
     }
 
     @Override
     public void stop() throws Exception {
-
-        log.info("stopped RecrepEngine");
-
+        messageConsumerList.forEach(MessageConsumer::unregister);
+        log.info("Stopped " + this.getClass().getName());
     }
 
     private void subscribeToReqrepEvents() {
 
-        eventSubscriber.subscribe(startRecordStreamHandler, RecrepEventType.RECORDJOB_REQUEST);
-        eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED);
-        eventSubscriber.subscribe(startReplayStreamHandler, RecrepEventType.REPLAYJOB_REQUEST);
-        eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED);
+        messageConsumerList.add(eventSubscriber.subscribe(startRecordStreamHandler, RecrepEventType.RECORDJOB_REQUEST));
+        messageConsumerList.add(eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED));
+        messageConsumerList.add(eventSubscriber.subscribe(startReplayStreamHandler, RecrepEventType.REPLAYJOB_REQUEST));
+        messageConsumerList.add(eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED));
 
     }
 
