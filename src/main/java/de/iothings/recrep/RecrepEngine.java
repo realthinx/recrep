@@ -53,18 +53,16 @@ public class RecrepEngine extends AbstractVerticle {
     }
 
     private void subscribeToReqrepEvents() {
-
         messageConsumerList.add(eventSubscriber.subscribe(startRecordStreamHandler, RecrepEventType.RECORDJOB_REQUEST));
         messageConsumerList.add(eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED));
         messageConsumerList.add(eventSubscriber.subscribe(startReplayStreamHandler, RecrepEventType.REPLAYJOB_REQUEST));
         messageConsumerList.add(eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED));
-
     }
 
     private void startRecordStream(JsonObject event) {
 
         JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
-        Logger recordLog = RecordLogHelper.createAndGetRecordLogger(recordJob.getString(RecrepRecordJobFields.NAME));
+        Logger recordLog = RecordLogHelper.createAndGetRecordLogger(recordJob);
 
         MessageConsumer<JsonObject> recordStream = vertx.eventBus().consumer(recordJob.getString(RecrepRecordJobFields.NAME), message -> {
             recordLog.info(message.headers().get("source") + "|" + encodeObject(message.body()));

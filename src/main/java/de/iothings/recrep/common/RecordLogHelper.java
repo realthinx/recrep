@@ -1,5 +1,7 @@
 package de.iothings.recrep.common;
 
+import de.iothings.recrep.model.RecrepRecordJobFields;
+import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.Appender;
@@ -22,9 +24,12 @@ public class RecordLogHelper {
 
     private static final Logger log = LoggerFactory.getLogger(RecordLogHelper.class.getName());
 
-    public static Logger createAndGetRecordLogger(String recordJobName) {
+    public static Logger createAndGetRecordLogger(JsonObject recordJob) {
         final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         final Configuration config = ctx.getConfiguration();
+
+        String recordJobName = recordJob.getString(RecrepRecordJobFields.NAME);
+        String recordFilePath = recordJob.getString(RecrepRecordJobFields.FILE_PATH);
 
         Layout layout = PatternLayout.newBuilder()
                 .withPattern("%d{UNIX_MILLIS}|%m%n")
@@ -35,9 +40,9 @@ public class RecordLogHelper {
         Appender appender = RollingFileAppender.newBuilder()
                 .withName(recordJobName)
                 .withAppend(true)
-                .withFileName(recordJobName + ".log")
+                .withFileName((recordFilePath != null ? recordFilePath + "/" : "") + recordJobName + ".log")
                 .withConfiguration(config)
-                .withFilePattern(recordJobName + ".log-%i")
+                .withFilePattern((recordFilePath != null ? recordFilePath + "/" : "") + recordJobName + ".log-%i")
                 .withLayout(layout)
                 .withPolicy(sizeBasedTriggeringPolicy)
                 .build();

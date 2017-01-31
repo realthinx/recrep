@@ -12,5 +12,6 @@ public class RecrepRecordJobFields {
     public static final String TIMESTAMP_START = "timestampStart";
     public static final String TIMESTAMP_END = "timestampEnd";
     public static final String MAX_SIZE_MB = "maxSizeMb";
+    public static final String FILE_PATH = "filePath";
 
 }
