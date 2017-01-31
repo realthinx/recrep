@@ -25,6 +25,7 @@ import java.util.*;
  * Created by ue60219 on 31.01.2017.
  */
 
+
 @RunWith(VertxUnitRunner.class)
 public class BasicRecordTestSuite {
 
