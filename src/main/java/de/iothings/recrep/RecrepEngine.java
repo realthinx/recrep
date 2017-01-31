@@ -26,10 +26,10 @@ public class RecrepEngine extends AbstractVerticle {
 
     private final Logger log = LoggerFactory.getLogger(RecrepEngine.class.getName());
     private final Kryo kryo = new Kryo();
-    private final Handler<JsonObject> startRecordStreamHandler = event -> { startRecordStream(event); };
-    private final Handler<JsonObject> endRecordStreamHandler = event -> { endRecordStream(event); };
-    private final Handler<JsonObject> startReplayStreamHandler = event -> { startReplayStream(event); };
-    private final Handler<JsonObject> endReplayStreamHandler = event -> { endReplayStream(event); };
+    private final Handler<JsonObject> startRecordStreamHandler = this::startRecordStream;
+    private final Handler<JsonObject> endRecordStreamHandler = this::endRecordStream;
+    private final Handler<JsonObject> startReplayStreamHandler = this::startReplayStream;
+    private final Handler<JsonObject> endReplayStreamHandler = this::endReplayStream;
 
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;

@@ -37,7 +37,7 @@ public class Recorder extends AbstractVerticle {
     private void startRecordJob(JsonObject event) {
 
         JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
-        final MessageConsumer<JsonObject>[] testDataConsumer = new MessageConsumer[recordJob.getJsonArray(RecrepRecordJobFields.SOURCES).size()];
+        final MessageConsumer<JsonObject>[] dataConsumer = new MessageConsumer[recordJob.getJsonArray(RecrepRecordJobFields.SOURCES).size()];
 
         long now = System.currentTimeMillis();
         long start = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_START) - now;
@@ -50,7 +50,7 @@ public class Recorder extends AbstractVerticle {
                 for (int i = 0; i < recordJob.getJsonArray(RecrepRecordJobFields.SOURCES).size(); i++) {
                     final String source = recordJob.getJsonArray(RecrepRecordJobFields.SOURCES).getString(i);
                     log.debug("Create consumer to address " + source);
-                    testDataConsumer[i] = vertx.eventBus().consumer(source, message -> {
+                    dataConsumer[i] = vertx.eventBus().consumer(source, message -> {
                         DeliveryOptions deliveryOptions = new DeliveryOptions();
                         deliveryOptions.addHeader("source", source);
                         vertx.eventBus().send(recordJob.getString(RecrepRecordJobFields.NAME), message.body(), deliveryOptions);
@@ -59,8 +59,8 @@ public class Recorder extends AbstractVerticle {
             });
 
             vertx.setTimer(end, tick -> {
-                for (int i = 0; i < testDataConsumer.length; i++) {
-                    testDataConsumer[i].unregister();
+                for (int i = 0; i < dataConsumer.length; i++) {
+                    dataConsumer[i].unregister();
                 }
                 eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_FINISHED, recordJob));
             });

@@ -1,6 +1,5 @@
 package de.iothings.recrep;
 
-import de.iothings.recrep.pubsub.EventPublisher;
 import io.vertx.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,22 +15,20 @@ public class RecrepEmbedded {
 
     private static Logger log = LoggerFactory.getLogger(RecrepEmbedded.class.getName());
     private static Vertx vertx;
-    private static EventPublisher eventPublisher;
     private int deploymentIndex = 0;
-    private VoidHandler deployFinishedHandler;
 
     private ArrayList<String> orderedDeployables;
 
-    public RecrepEmbedded(Vertx vertx) {
+    public RecrepEmbedded(Vertx vertx, List<String> orderedDeployables) {
+
         this.vertx = vertx;
+
         this.orderedDeployables = new ArrayList<>(Arrays.asList(
                 RecrepEngine.class.getName(),
                 Replayer.class.getName(),
                 Recorder.class.getName(),
                 RecrepApi.class.getName()));
-    }
 
-    public void addOrderedDeployables(List<String> orderedDeployables ) {
         this.orderedDeployables.addAll(orderedDeployables);
     }
 
