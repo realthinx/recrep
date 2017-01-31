@@ -55,7 +55,7 @@ public class Recorder extends AbstractVerticle {
                 eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_STARTED, recordJob));
                 for (int i = 0; i < recordJob.getJsonArray(RecrepRecordJobFields.SOURCES).size(); i++) {
                     final String source = recordJob.getJsonArray(RecrepRecordJobFields.SOURCES).getString(i);
-                    log.debug("Create consumer to address " + source);
+                    log.debug("Create consumer for address " + source);
                     dataConsumer[i] = vertx.eventBus().consumer(source, message -> {
                         DeliveryOptions deliveryOptions = new DeliveryOptions();
                         deliveryOptions.addHeader("source", source);
