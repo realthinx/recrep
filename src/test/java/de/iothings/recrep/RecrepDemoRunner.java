@@ -31,9 +31,8 @@ public class RecrepDemoRunner {
         eventPublisher = new EventPublisher(vertx);
         eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
 
-
-        eventSubscriber.subscribe(requestReplayJobHandler, RecrepEventType.RECORDSTREAM_ENDED);
-        subscribeToReplayStream();
+//        eventSubscriber.subscribe(requestReplayJobHandler, RecrepEventType.RECORDSTREAM_ENDED);
+//        subscribeToReplayStream();
         startTestDataStream("testdata_in");
         vertx.setTimer(2000, tick -> sendDemoRecordJobRequest());
     }
@@ -64,6 +63,7 @@ public class RecrepDemoRunner {
         vertx.setTimer(random.nextInt(500)+100, tick -> {
             JsonObject jsonObject = new JsonObject().put("index",tick).put("payload",new String(UUID.randomUUID().toString()));
             vertx.eventBus().publish(address, jsonObject);
+            log.info("Record: " + jsonObject);
         });
     }
 
@@ -86,7 +86,7 @@ public class RecrepDemoRunner {
 
     private static void subscribeToReplayStream() {
         vertx.eventBus().consumer("testdata_in_replay", message -> {
-            log.info(message.body()+"");
+            log.info("Replay" + message.body());
         });
     }
 

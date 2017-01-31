@@ -21,7 +21,7 @@
         <version.vertx>3.3.3</version.vertx>
         <version.kryo>4.0.0</version.kryo>
         <version.log4j>2.7</version.log4j>
-        <version.junit>3.8.1</version.junit>
+        <version.junit>4.12</version.junit>
         <version.reactivestreams>1.0.0</version.reactivestreams>
         <pluginversion.compile>3.6.0</pluginversion.compile>
     </properties>
@@ -48,7 +48,6 @@
             <artifactId>vertx-web</artifactId>
             <version>${version.vertx}</version>
         </dependency>
-
 
         <!-- kryo serialization -->
         <dependency>
@@ -82,6 +81,14 @@
           <artifactId>junit</artifactId>
           <version>${version.junit}</version>
           <scope>test</scope>
+        </dependency>
+
+        <!-- vert.x unit -->
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-unit</artifactId>
+            <version>${version.vertx}</version>
+            <scope>test</scope>
         </dependency>
 
     </dependencies>
