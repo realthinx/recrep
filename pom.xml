@@ -19,7 +19,6 @@
 
     <properties>
         <version.vertx>3.3.3</version.vertx>
-        <version.kryo>4.0.0</version.kryo>
         <version.log4j>2.7</version.log4j>
         <version.junit>4.12</version.junit>
         <version.reactivestreams>1.0.0</version.reactivestreams>
@@ -47,13 +46,6 @@
             <groupId>io.vertx</groupId>
             <artifactId>vertx-web</artifactId>
             <version>${version.vertx}</version>
-        </dependency>
-
-        <!-- kryo serialization -->
-        <dependency>
-          <groupId>com.esotericsoftware</groupId>
-          <artifactId>kryo</artifactId>
-          <version>${version.kryo}</version>
         </dependency>
 
         <!-- log4j2 logging -->
