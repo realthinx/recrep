@@ -1,33 +1,25 @@
 package de.iothings.recrep;
 
-
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
+import de.iothings.recrep.common.RecordLogHelper;
 import de.iothings.recrep.model.*;
-import de.iothings.recrep.state.RecrepJobRegistry;
 import de.iothings.recrep.pubsub.EventPublisher;
 import de.iothings.recrep.pubsub.EventSubscriber;
-import de.iothings.recrep.common.RecordLogHelper;
+import de.iothings.recrep.state.RecrepJobRegistry;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.eventbus.MessageProducer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.rxjava.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 
 public class RecrepEngine extends AbstractVerticle {
 
     private final Logger log = LoggerFactory.getLogger(RecrepEngine.class.getName());
-    private final Kryo kryo = new Kryo();
     private final Handler<JsonObject> startRecordStreamHandler = this::startRecordStream;
     private final Handler<JsonObject> endRecordStreamHandler = this::endRecordStream;
     private final Handler<JsonObject> startReplayStreamHandler = this::startReplayStream;
@@ -118,17 +110,11 @@ public class RecrepEngine extends AbstractVerticle {
     }
 
     private String encodeObject(JsonObject object) {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        Output output = new Output(byteArrayOutputStream);
-        kryo.writeObject(output, object);
-        output.close();
-        return Base64.getEncoder().encodeToString(byteArrayOutputStream.toByteArray());
+        return object.toString();
     }
 
     private JsonObject decodeObject(String object) {
-        Input input = new Input(new ByteArrayInputStream(Base64.getDecoder().decode(object)));
-        JsonObject jsonObject = kryo.readObject(input, JsonObject.class);
-        input.close();
+        JsonObject jsonObject = new JsonObject(object);
         return jsonObject;
     }
 }
