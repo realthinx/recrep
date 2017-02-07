@@ -82,15 +82,21 @@ public class RecrepEngine extends AbstractVerticle {
         JsonObject replayJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
 
         HashMap<String, MessageProducer<JsonObject>> messageProducers = new HashMap<>();
-        replayJob.getJsonObject(RecrepReplayJobFields.TARGET_MAPPING).forEach(mapping -> {
-            messageProducers.put(mapping.getKey(), vertx.eventBus().sender(mapping.getValue().toString()));
+        replayJob.getJsonArray(RecrepReplayJobFields.TARGET_MAPPINGS).forEach(mapping -> {
+            JsonObject targetMapping = (JsonObject) mapping;
+            String sourceIdentifier = targetMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER);
+            String targetIdentifier = targetMapping.getString(RecrepEndpointMappingFields.TARGET_IDENTIFIER);
+            messageProducers.put(sourceIdentifier, vertx.eventBus().sender(targetIdentifier));
 
         });
 
         MessageConsumer<JsonObject> replayStream = vertx.eventBus().consumer(replayJob.getString(RecrepReplayJobFields.NAME), message -> {
             JsonObject recordLine = message.body();
             String source = recordLine.getString("source");
-            messageProducers.get(source).send(decodeObject(recordLine.getString("payload")));
+            MessageProducer producer = messageProducers.get(source);
+            if(producer != null) {
+                producer.send(decodeObject(recordLine.getString("payload")));
+            }
         });
 
         try {

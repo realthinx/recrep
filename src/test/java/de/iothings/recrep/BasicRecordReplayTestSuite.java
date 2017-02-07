@@ -31,7 +31,9 @@ public class BasicRecordReplayTestSuite {
     private EventSubscriber eventSubscriber;
     private long periodicTestDataId;
 
-    private String testDataStreamAdress;;
+    private String stage;
+    private String testDataStreamAdress;
+    private String testTargetStreamAdress;
     private String testRecordJobName;
     private String testRecordJobFilePath;
 
@@ -41,7 +43,9 @@ public class BasicRecordReplayTestSuite {
     public void before(TestContext context) {
         Async async = context.async();
 
+        stage = "TEST";
         testDataStreamAdress = "testdata_in";
+        testTargetStreamAdress = "testdata_replay";
         testRecordJobName = "recording_job_" + UUID.randomUUID().toString();
         testRecordJobFilePath = "./.temp";
 
@@ -104,23 +108,26 @@ public class BasicRecordReplayTestSuite {
         long start = now + 1000;
         long end = now + 10000;
         JsonArray sources = new JsonArray();
-        sources.add(testDataStreamAdress);
+        RecrepEndpointMappingBuilder builder = new RecrepEndpointMappingBuilder();
+        sources.add(builder.withSourceIdentifier(testDataStreamAdress).build());
 
         JsonObject recordJob = new JsonObject();
         recordJob.put(RecrepRecordJobFields.NAME, testRecordJobName);
         recordJob.put(RecrepRecordJobFields.FILE_PATH, testRecordJobFilePath);
         recordJob.put(RecrepRecordJobFields.TIMESTAMP_START, start);
         recordJob.put(RecrepRecordJobFields.TIMESTAMP_END, end);
-        recordJob.put(RecrepRecordJobFields.SOURCES, sources);
+        recordJob.put(RecrepRecordJobFields.SOURCE_MAPPINGS, sources);
         eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_REQUEST, recordJob));
     }
 
     private void sendDemoReplayJobRequest(JsonObject recordJob) {
 
-        JsonObject targetMapping = new JsonObject();
-        recordJob.getJsonArray(RecrepRecordJobFields.SOURCES).forEach(source -> {
-            targetMapping.put(source.toString(),source.toString()+"_replay");
-            messageConsumerList.add(rule.vertx().eventBus().consumer(source.toString()+"_replay", message -> {
+        JsonArray targetMappings = new JsonArray();
+        recordJob.getJsonArray(RecrepRecordJobFields.SOURCE_MAPPINGS).forEach(source -> {
+            RecrepEndpointMappingBuilder builder = new RecrepEndpointMappingBuilder();
+            JsonObject targetMapping = builder.withStage(stage).withSourceIdentifier(testDataStreamAdress).withTargetIdentifier(testTargetStreamAdress).build();
+            targetMappings.add(targetMapping);
+            messageConsumerList.add(rule.vertx().eventBus().consumer(targetMapping.getString(RecrepEndpointMappingFields.TARGET_IDENTIFIER), message -> {
                 System.out.println("Replay Message: " + System.currentTimeMillis() + " - " + message.body());
             }));
         });
@@ -129,8 +136,8 @@ public class BasicRecordReplayTestSuite {
         replayJob.put(RecrepReplayJobFields.NAME, testRecordJobName);
         replayJob.put(RecrepReplayJobFields.FILE_PATH, testRecordJobFilePath);
         replayJob.put(RecrepReplayJobFields.RECORDJOBNAME, recordJob.getString(RecrepRecordJobFields.NAME));
-        replayJob.put(RecrepReplayJobFields.TARGET_MAPPING, targetMapping);
-        replayJob.put(RecrepReplayJobFields.SPEEDFACTOR, 2);
+        replayJob.put(RecrepReplayJobFields.TARGET_MAPPINGS, targetMappings);
+        replayJob.put(RecrepReplayJobFields.SPEEDFACTOR, 1);
         eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYJOB_REQUEST, replayJob));
 
     }

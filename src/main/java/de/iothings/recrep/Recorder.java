@@ -43,7 +43,8 @@ public class Recorder extends AbstractVerticle {
     private void startRecordJob(JsonObject event) {
 
         JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
-        final MessageConsumer<JsonObject>[] dataStreamConsumer = new MessageConsumer[recordJob.getJsonArray(RecrepRecordJobFields.SOURCES).size()];
+        final ArrayList<MessageConsumer<JsonObject>> dataStreamConsumer = new ArrayList<>();
+        //final MessageConsumer<JsonObject>[] dataStreamConsumer = new MessageConsumer[recordJob.getJsonArray(RecrepRecordJobFields.SOURCES).size()];
 
         long now = System.currentTimeMillis();
         long start = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_START) - now;
@@ -53,21 +54,21 @@ public class Recorder extends AbstractVerticle {
 
             vertx.setTimer(start, tick -> {
                 eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_STARTED, recordJob));
-                for (int i = 0; i < recordJob.getJsonArray(RecrepRecordJobFields.SOURCES).size(); i++) {
-                    final String source = recordJob.getJsonArray(RecrepRecordJobFields.SOURCES).getString(i);
-                    log.debug("Create consumer for address " + source);
-                    dataStreamConsumer[i] = vertx.eventBus().consumer(source, message -> {
+                recordJob.getJsonArray(RecrepRecordJobFields.SOURCE_MAPPINGS).forEach((mapping -> {
+                    JsonObject sourceMapping = (JsonObject) mapping;
+                    String sourceIdentifier = sourceMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER);
+                    log.debug("Create consumer for address " + sourceIdentifier);
+                    dataStreamConsumer.add(vertx.eventBus().consumer(sourceIdentifier, message -> {
                         DeliveryOptions deliveryOptions = new DeliveryOptions();
-                        deliveryOptions.addHeader("source", source);
+                        deliveryOptions.addHeader("source", sourceIdentifier);
                         vertx.eventBus().send(recordJob.getString(RecrepRecordJobFields.NAME), message.body(), deliveryOptions);
-                    });
-                }
+                    }));
+                }));
             });
+
             try {
                 vertx.setTimer(end, tick -> {
-                    for (int i = 0; i < dataStreamConsumer.length; i++) {
-                        dataStreamConsumer[i].unregister();
-                    }
+                    dataStreamConsumer.forEach(MessageConsumer::unregister);
                     eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_FINISHED, recordJob));
                 });
             } catch (IllegalArgumentException x) {
