@@ -1,5 +1,6 @@
 package de.iothings.recrep;
 
+import de.iothings.recrep.common.RecordLogHelper;
 import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
 import de.iothings.recrep.pubsub.EventSubscriber;
@@ -29,9 +30,8 @@ public class Replayer extends AbstractVerticle {
     private EventSubscriber eventSubscriber;
     private List<MessageConsumer> messageConsumerList = new ArrayList<>();
 
-    private final Handler<JsonObject> startReplayJobHandler = event -> { startReplayJob(event); };
-    private final Handler<Throwable> exceptionHandler = throwable -> { log.error(throwable.getMessage()); };
-    private Pump pump;
+    private final Handler<JsonObject> startReplayJobHandler = event -> startReplayJob(event);
+    private final Handler<Throwable> exceptionHandler = throwable -> log.error(throwable.getMessage());
 
     @Override
     public void start() throws Exception {
@@ -55,29 +55,26 @@ public class Replayer extends AbstractVerticle {
 
         JsonObject replayJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
 
-        Stream<String> recordFileLines;
-        try {
-            recordFileLines = Files.lines(Paths.get(replayJob.getString(RecrepReplayJobFields.FILE_PATH) + "/" + replayJob.getString(RecrepReplayJobFields.RECORDJOBNAME) + ".log"));
-        } catch (Exception x) {
-            log.error("Failed to read record log file: " + replayJob.getString(RecrepReplayJobFields.RECORDJOBNAME) + ".log :" + x.getMessage());
-            return;
+        Stream<String> recordFileLines = RecordLogHelper.getRecordLogFileStream(replayJob);
+        if(recordFileLines != null) {
+            RecordReadStream<String> recordStream = new RecordReadStream<>(recordFileLines);
+            recordStream.exceptionHandler(exceptionHandler);
+
+            TimelineWriteStream timelineStream = new TimelineWriteStream(vertx, replayJob.getString(RecrepReplayJobFields.NAME), 1000, replayJob.getInteger(RecrepReplayJobFields.SPEEDFACTOR));
+            timelineStream.exceptionHandler(exceptionHandler);
+            timelineStream.endHandler( end -> eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYJOB_FINISHED, replayJob)));
+
+            Pump pump = Pump.pump(recordStream, timelineStream);
+            recordStream.endHandler(end -> {
+                pump.stop();
+                timelineStream.end();
+            });
+
+            pump.start();
+            eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYJOB_STARTED, replayJob));
+        } else {
+            log.error("Failed to load record job log file. Discarding replay job.");
         }
-
-        RecordReadStream<String> recordStream = new RecordReadStream<>(recordFileLines);
-        recordStream.exceptionHandler(exceptionHandler);
-
-        TimelineWriteStream timelineStream = new TimelineWriteStream(vertx, replayJob.getString(RecrepReplayJobFields.NAME), 1000, replayJob.getInteger(RecrepReplayJobFields.SPEEDFACTOR));
-        timelineStream.exceptionHandler(exceptionHandler);
-        timelineStream.endHandler( end -> eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYJOB_FINISHED, replayJob)));
-
-        Pump pump = Pump.pump(recordStream, timelineStream);
-        recordStream.endHandler(end -> {
-            pump.stop();
-            timelineStream.end();
-        });
-
-        pump.start();
-        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYJOB_STARTED, replayJob));
     }
 
 }

@@ -125,8 +125,6 @@ public class BasicRecordReplayTestSuite {
             }));
         });
 
-
-
         JsonObject replayJob = new JsonObject();
         replayJob.put(RecrepReplayJobFields.NAME, testRecordJobName);
         replayJob.put(RecrepReplayJobFields.FILE_PATH, testRecordJobFilePath);
@@ -134,7 +132,6 @@ public class BasicRecordReplayTestSuite {
         replayJob.put(RecrepReplayJobFields.TARGET_MAPPING, targetMapping);
         replayJob.put(RecrepReplayJobFields.SPEEDFACTOR, 2);
         eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYJOB_REQUEST, replayJob));
-
 
     }
 

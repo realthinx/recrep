@@ -63,14 +63,16 @@ public class Recorder extends AbstractVerticle {
                     });
                 }
             });
-
-            vertx.setTimer(end, tick -> {
-                for (int i = 0; i < dataStreamConsumer.length; i++) {
-                    dataStreamConsumer[i].unregister();
-                }
-                eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_FINISHED, recordJob));
-            });
-
+            try {
+                vertx.setTimer(end, tick -> {
+                    for (int i = 0; i < dataStreamConsumer.length; i++) {
+                        dataStreamConsumer[i].unregister();
+                    }
+                    eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_FINISHED, recordJob));
+                });
+            } catch (IllegalArgumentException x) {
+                log.warn(x.getMessage());
+            }
         } else {
             log.warn("Discarding Record Job. Start time is in the past.");
         }

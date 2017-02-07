@@ -74,13 +74,18 @@ public class TimelineWriteStream implements WriteStream<String> {
                     lastSchedule.set(schedule);
                     Long delay = schedule - nowTimestamp;
                     if(delay >= 1) {
-                        vertx.setTimer(delay, tick -> {
-                            messageProducer.send(message);
+                        try {
+                            vertx.setTimer(delay, tick -> {
+                                messageProducer.send(message);
+                                doResume();
+                            });
+                        } catch (IllegalArgumentException x) {
+                            log.warn(x.getMessage());
                             doResume();
-                        });
+                        }
                     } else {
-                        if(delay < 0) {
-                            log.warn("Running behind scheduled timeline!");
+                        if(delay < 1) {
+                            log.warn("Running " + delay + " ms behind scheduled timeline!");
                         }
                         messageProducer.send(message);
                         doResume();
@@ -140,14 +145,28 @@ public class TimelineWriteStream implements WriteStream<String> {
     @Override
     public void end() {
         log.debug("WriteStream end() called");
-        Long delay = (lastSchedule.get() - System.currentTimeMillis() + 100);
-        vertx.setTimer(delay, tick -> {
+        Long delay = (lastSchedule.get() - System.currentTimeMillis());
+        if(delay < 0) {
+            delay = 100L;
+        } else {
+            delay += 100L;
+        }
+        try {
+            vertx.setTimer(delay, tick -> {
+                log.debug("closing messageproducer for: " + messageProducer.address());
+                messageProducer.close();
+                if(this.endHandler!= null) {
+                    this.endHandler.handle(null);
+                }
+            });
+        } catch (IllegalArgumentException x) {
+            log.warn(x.getMessage());
             log.debug("closing messageproducer for: " + messageProducer.address());
             messageProducer.close();
             if(this.endHandler!= null) {
                 this.endHandler.handle(null);
             }
-        });
+        }
     }
 
     @Override
