@@ -1,23 +1,18 @@
 package de.iothings.recrep;
 
-import de.iothings.recrep.model.EventBusAddress;
-import de.iothings.recrep.model.RecrepEventBuilder;
-import de.iothings.recrep.model.RecrepEventType;
-import de.iothings.recrep.model.RecrepRecordJobFields;
+import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
 import de.iothings.recrep.pubsub.EventSubscriber;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.RunTestOnContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import java.util.*;
 
@@ -27,7 +22,7 @@ import java.util.*;
 
 
 @RunWith(VertxUnitRunner.class)
-public class BasicRecordTestSuite {
+public class BasicRecordReplayTestSuite {
 
     @Rule
     public RunTestOnContext rule = new RunTestOnContext();
@@ -40,6 +35,7 @@ public class BasicRecordTestSuite {
     private String testRecordJobName;
     private String testRecordJobFilePath;
 
+    private List<MessageConsumer> messageConsumerList = new ArrayList<>();
 
     @Before
     public void before(TestContext context) {
@@ -61,25 +57,37 @@ public class BasicRecordTestSuite {
         });
 
         // start test data stream
-        periodicTestDataId = rule.vertx().setPeriodic(100, this::sendTestData);
+        periodicTestDataId = rule.vertx().setPeriodic(1000, this::sendTestData);
     }
 
     @Test
     public void testRecordJob(TestContext context) {
         Async async = context.async();
         sendDemoRecordJobRequest();
+
         Handler<JsonObject> endRecordStreamHandler = endEvent -> {
+            JsonObject recordJob = endEvent.getJsonObject(RecrepEventFields.PAYLOAD);
             Buffer fileBuffer = rule.vertx().fileSystem().readFileBlocking(testRecordJobFilePath + "/" + testRecordJobName + ".log");
+            System.out.println(fileBuffer.toString());
             context.assertFalse(fileBuffer.toString().isEmpty());
+            sendDemoReplayJobRequest(recordJob);
+        };
+
+        Handler<JsonObject> endReplayStreamHandler = endEvent -> {
+
+            messageConsumerList.forEach(MessageConsumer::unregister);
             async.complete();
         };
-        eventSubscriber.subscribe(endRecordStreamHandler,RecrepEventType.RECORDJOB_FINISHED);
+
+        messageConsumerList.add(eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED));
+        messageConsumerList.add(eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED));
     }
 
 
     @After
     public void after(TestContext context) {
         Async async = context.async();
+
         rule.vertx().cancelTimer(periodicTestDataId);
         rule.vertx().close( voidAsyncResult -> {
             async.complete();
@@ -93,8 +101,8 @@ public class BasicRecordTestSuite {
 
     private void sendDemoRecordJobRequest() {
         long now = System.currentTimeMillis();
-        long start = now + 500;
-        long end = now + 1500;
+        long start = now + 1000;
+        long end = now + 10000;
         JsonArray sources = new JsonArray();
         sources.add(testDataStreamAdress);
 
@@ -105,6 +113,29 @@ public class BasicRecordTestSuite {
         recordJob.put(RecrepRecordJobFields.TIMESTAMP_END, end);
         recordJob.put(RecrepRecordJobFields.SOURCES, sources);
         eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_REQUEST, recordJob));
+    }
+
+    private void sendDemoReplayJobRequest(JsonObject recordJob) {
+
+        JsonObject targetMapping = new JsonObject();
+        recordJob.getJsonArray(RecrepRecordJobFields.SOURCES).forEach(source -> {
+            targetMapping.put(source.toString(),source.toString()+"_replay");
+            messageConsumerList.add(rule.vertx().eventBus().consumer(source.toString()+"_replay", message -> {
+                System.out.println("Replay Message: " + System.currentTimeMillis() + " - " + message.body());
+            }));
+        });
+
+
+
+        JsonObject replayJob = new JsonObject();
+        replayJob.put(RecrepReplayJobFields.NAME, testRecordJobName);
+        replayJob.put(RecrepReplayJobFields.FILE_PATH, testRecordJobFilePath);
+        replayJob.put(RecrepReplayJobFields.RECORDJOBNAME, recordJob.getString(RecrepRecordJobFields.NAME));
+        replayJob.put(RecrepReplayJobFields.TARGET_MAPPING, targetMapping);
+        replayJob.put(RecrepReplayJobFields.SPEEDFACTOR, 2);
+        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYJOB_REQUEST, replayJob));
+
+
     }
 
     private void cleanup(TestContext context) {

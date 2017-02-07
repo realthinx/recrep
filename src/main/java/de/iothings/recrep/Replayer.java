@@ -57,7 +57,7 @@ public class Replayer extends AbstractVerticle {
 
         Stream<String> recordFileLines;
         try {
-            recordFileLines = Files.lines(Paths.get(replayJob.getString(RecrepReplayJobFields.RECORDJOBNAME) + ".log"));
+            recordFileLines = Files.lines(Paths.get(replayJob.getString(RecrepReplayJobFields.FILE_PATH) + "/" + replayJob.getString(RecrepReplayJobFields.RECORDJOBNAME) + ".log"));
         } catch (Exception x) {
             log.error("Failed to read record log file: " + replayJob.getString(RecrepReplayJobFields.RECORDJOBNAME) + ".log :" + x.getMessage());
             return;

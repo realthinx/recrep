@@ -94,7 +94,7 @@ public class RecrepEngine extends AbstractVerticle {
         });
 
         try {
-            RecrepJobRegistry.registerRecordStreamConsumer(replayJob.getString(RecrepReplayJobFields.NAME),replayStream);
+            RecrepJobRegistry.registerReplayStreamConsumer(replayJob.getString(RecrepReplayJobFields.NAME),replayStream);
             eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYSTREAM_CREATED, replayJob));
         } catch (Exception x) {
             log.error("Failed to register message consumer for replay stream: " + x.getMessage());
@@ -105,7 +105,7 @@ public class RecrepEngine extends AbstractVerticle {
 
     private void endReplayStream(JsonObject event) {
         JsonObject replayJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
-        RecrepJobRegistry.unregisterRecordStreamConsumer(replayJob.getString(RecrepReplayJobFields.NAME));
+        RecrepJobRegistry.unregisterReplayStreamConsumer(replayJob.getString(RecrepReplayJobFields.NAME));
         eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYSTREAM_ENDED, replayJob));
     }
 

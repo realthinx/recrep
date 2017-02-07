@@ -25,4 +25,17 @@ public class RecrepJobRegistry {
         recordStreamConsumerMap.put(jobName, messageConsumer);
     }
 
+    public static void unregisterReplayStreamConsumer(String jobName) {
+        if(replayStreamConsumerMap.containsKey(jobName)) {
+            replayStreamConsumerMap.remove(jobName).unregister();
+        }
+    }
+
+    public static void registerReplayStreamConsumer(String jobName, MessageConsumer messageConsumer) throws Exception {
+        if(replayStreamConsumerMap.containsKey(jobName)) {
+            throw new Exception("This job name is already registered.");
+        }
+        replayStreamConsumerMap.put(jobName, messageConsumer);
+    }
+
 }

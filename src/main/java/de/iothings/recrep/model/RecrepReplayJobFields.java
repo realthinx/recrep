@@ -13,5 +13,6 @@ public class RecrepReplayJobFields {
     public static final String SPEEDFACTOR = "speedFactor";
     public static final String TIMESTAMP_FROM = "timestampFrom";
     public static final String TIMESTAMP_TO = "timestampTo";
+    public static final String FILE_PATH = "filePath";
 
 }

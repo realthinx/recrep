@@ -26,8 +26,9 @@ public class RecrepEmbedded {
         this.orderedDeployables = new ArrayList<>(Arrays.asList(
                 RecrepEngine.class.getName(),
                 Replayer.class.getName(),
-                Recorder.class.getName(),
-                RecrepApi.class.getName()));
+                Recorder.class.getName()
+                //Api
+                ));
 
         this.orderedDeployables.addAll(orderedDeployables);
     }
