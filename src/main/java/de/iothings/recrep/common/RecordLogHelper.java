@@ -19,6 +19,7 @@ import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.ArrayList;
@@ -53,9 +54,9 @@ public class RecordLogHelper {
         Appender appender = RollingFileAppender.newBuilder()
                 .withName(recordJobName)
                 .withAppend(true)
-                .withFileName((recordFilePath != null ? recordFilePath + "/" : "") + recordJobName + ".log")
+                .withFileName((recordFilePath != null ? recordFilePath + File.separator : "") + recordJobName + ".log")
                 .withConfiguration(config)
-                .withFilePattern((recordFilePath != null ? recordFilePath + "/" : "") + recordJobName + "-%i.log")
+                .withFilePattern((recordFilePath != null ? recordFilePath + File.separator : "") + recordJobName + "-%i.log")
                 .withLayout(layout)
                 .withPolicy(sizeBasedTriggeringPolicy)
                 .withStrategy(defaultRolloverStrategy)

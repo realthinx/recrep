@@ -1,5 +1,6 @@
 package de.iothings.recrep;
 
+import de.iothings.recrep.common.JobConfigHelper;
 import de.iothings.recrep.common.RecordLogHelper;
 import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
@@ -21,8 +22,10 @@ public class RecrepEngine extends AbstractVerticle {
 
     private final Logger log = LoggerFactory.getLogger(RecrepEngine.class.getName());
     private final Handler<JsonObject> startRecordStreamHandler = this::startRecordStream;
+    private final Handler<JsonObject> saveRecordJobConfigHandler = this::saveJobConfig;
     private final Handler<JsonObject> endRecordStreamHandler = this::endRecordStream;
     private final Handler<JsonObject> startReplayStreamHandler = this::startReplayStream;
+    private final Handler<JsonObject> saveReplayJobConfigHandler = this::saveJobConfig;
     private final Handler<JsonObject> endReplayStreamHandler = this::endReplayStream;
 
     private EventPublisher eventPublisher;
@@ -46,8 +49,10 @@ public class RecrepEngine extends AbstractVerticle {
 
     private void subscribeToReqrepEvents() {
         messageConsumerList.add(eventSubscriber.subscribe(startRecordStreamHandler, RecrepEventType.RECORDJOB_REQUEST));
+        messageConsumerList.add(eventSubscriber.subscribe(saveRecordJobConfigHandler, RecrepEventType.RECORDJOB_REQUEST));
         messageConsumerList.add(eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED));
         messageConsumerList.add(eventSubscriber.subscribe(startReplayStreamHandler, RecrepEventType.REPLAYJOB_REQUEST));
+        messageConsumerList.add(eventSubscriber.subscribe(saveReplayJobConfigHandler, RecrepEventType.REPLAYJOB_REQUEST));
         messageConsumerList.add(eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED));
     }
 
@@ -69,6 +74,7 @@ public class RecrepEngine extends AbstractVerticle {
             RecordLogHelper.removeRecordLogger(recordJob.getString(RecrepRecordJobFields.NAME));
         }
     }
+
 
     private void endRecordStream(JsonObject event) {
         JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
@@ -108,6 +114,12 @@ public class RecrepEngine extends AbstractVerticle {
         }
 
     }
+
+    private void saveJobConfig(JsonObject event) {
+        JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
+        JobConfigHelper.saveJobConfig(recordJob);
+    }
+
 
     private void endReplayStream(JsonObject event) {
         JsonObject replayJob = event.getJsonObject(RecrepEventFields.PAYLOAD);

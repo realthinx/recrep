@@ -21,6 +21,7 @@
         <version.vertx>3.3.3</version.vertx>
         <version.log4j>2.7</version.log4j>
         <version.junit>4.12</version.junit>
+        <version.commons.io>2.5</version.commons.io>
         <version.reactivestreams>1.0.0</version.reactivestreams>
         <pluginversion.compile>3.6.0</pluginversion.compile>
     </properties>
@@ -73,6 +74,14 @@
           <artifactId>junit</artifactId>
           <version>${version.junit}</version>
           <scope>test</scope>
+        </dependency>
+
+        <!-- Apache Commons io -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>${version.commons.io}</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- vert.x unit -->
