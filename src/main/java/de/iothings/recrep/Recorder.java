@@ -1,5 +1,6 @@
 package de.iothings.recrep;
 
+import de.iothings.recrep.common.RecrepLogHelper;
 import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
 import de.iothings.recrep.pubsub.EventSubscriber;
@@ -17,8 +18,7 @@ import java.util.List;
 
 public class Recorder extends AbstractVerticle {
 
-    private static final Logger log = LoggerFactory.getLogger(Recorder.class.getName());
-
+    private RecrepLogHelper log;
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;
     private List<MessageConsumer> messageConsumerList = new ArrayList<>();
@@ -27,6 +27,7 @@ public class Recorder extends AbstractVerticle {
 
     @Override
     public void start() throws Exception {
+        log = new RecrepLogHelper(vertx, Recorder.class.getName());
         eventPublisher = new EventPublisher(vertx);
         eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
         messageConsumerList.add(eventSubscriber.subscribe(startRecordJobHandler, RecrepEventType.RECORDSTREAM_CREATED));

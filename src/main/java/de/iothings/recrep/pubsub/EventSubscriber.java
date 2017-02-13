@@ -1,5 +1,6 @@
 package de.iothings.recrep.pubsub;
 
+import de.iothings.recrep.common.RecrepLogHelper;
 import de.iothings.recrep.model.RecrepEventFields;
 import de.iothings.recrep.model.RecrepEventType;
 import io.vertx.core.Handler;
@@ -18,13 +19,14 @@ import java.util.function.Consumer;
  */
 public class EventSubscriber {
 
-    private final Logger log = LoggerFactory.getLogger(EventSubscriber.class.getName());
+    private RecrepLogHelper log;
     private Vertx vertx;
     private String address;
 
     public EventSubscriber(Vertx vertx, String address) {
         this.vertx = vertx;
         this.address = address;
+        this.log = new RecrepLogHelper(vertx, EventSubscriber.class.getName());
     }
 
     public MessageConsumer subscribe(Handler<JsonObject> handler, RecrepEventType... eventTypes) {

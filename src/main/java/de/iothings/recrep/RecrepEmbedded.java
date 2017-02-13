@@ -1,5 +1,6 @@
 package de.iothings.recrep;
 
+import de.iothings.recrep.common.RecrepLogHelper;
 import io.vertx.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +14,7 @@ import java.util.List;
  */
 public class RecrepEmbedded {
 
-    private static Logger log = LoggerFactory.getLogger(RecrepEmbedded.class.getName());
+    private static RecrepLogHelper log;
     private static Vertx vertx;
     private int deploymentIndex = 0;
 
@@ -22,8 +23,10 @@ public class RecrepEmbedded {
     public RecrepEmbedded(Vertx vertx, List<String> orderedDeployables) {
 
         this.vertx = vertx;
+        this.log = new RecrepLogHelper(vertx, RecrepEmbedded.class.getName());
 
         this.orderedDeployables = new ArrayList<>(Arrays.asList(
+                RecrepDefaultLogger.class.getName(),
                 RecrepEngine.class.getName(),
                 Replayer.class.getName(),
                 Recorder.class.getName()

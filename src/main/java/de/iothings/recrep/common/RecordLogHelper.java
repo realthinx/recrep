@@ -2,6 +2,8 @@ package de.iothings.recrep.common;
 
 import de.iothings.recrep.model.RecrepRecordJobFields;
 import de.iothings.recrep.model.RecrepReplayJobFields;
+import de.iothings.recrep.pubsub.EventPublisher;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -31,9 +33,15 @@ import java.util.stream.Stream;
  */
 public class RecordLogHelper {
 
-    private static final Logger log = LoggerFactory.getLogger(RecordLogHelper.class.getName());
+    private Vertx vertx;
+    private RecrepLogHelper log;
 
-    public static Logger createAndGetRecordLogger(JsonObject recordJob) {
+    public RecordLogHelper(Vertx vertx) {
+        this.vertx = vertx;
+        this.log = new RecrepLogHelper(vertx, RecordLogHelper.class.getName());
+    }
+
+    public Logger createAndGetRecordLogger(JsonObject recordJob) {
         final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         final Configuration config = ctx.getConfiguration();
 
@@ -77,7 +85,7 @@ public class RecordLogHelper {
         return LoggerFactory.getLogger(recordJobName);
     }
 
-    public static void removeRecordLogger(String recordJobName) {
+    public void removeRecordLogger(String recordJobName) {
         final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         final Configuration config = ctx.getConfiguration();
         config.removeLogger(recordJobName);
@@ -85,7 +93,7 @@ public class RecordLogHelper {
         log.debug("Removed log4j2 logger for record job and source: " + recordJobName);
     }
 
-    public static Stream<String> getRecordLogFileStream(JsonObject replayJob) {
+    public Stream<String> getRecordLogFileStream(JsonObject replayJob) {
 
         try {
 

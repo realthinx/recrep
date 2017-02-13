@@ -7,6 +7,8 @@ public enum EventBusAddress {
 
     RECREP_EVENTS,
     RECORDSTREAM,
-    REPLAYSTREAM;
+    REPLAYSTREAM,
+    RECREP_LOGSTREAM;
+
 
 }

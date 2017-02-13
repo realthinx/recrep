@@ -1,6 +1,7 @@
 package de.iothings.recrep;
 
 import de.iothings.recrep.common.RecordLogHelper;
+import de.iothings.recrep.common.RecrepLogHelper;
 import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
 import de.iothings.recrep.pubsub.EventSubscriber;
@@ -11,10 +12,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.streams.Pump;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -24,7 +21,8 @@ import java.util.stream.Stream;
  */
 public class Replayer extends AbstractVerticle {
 
-    private static final Logger log = LoggerFactory.getLogger(Replayer.class.getName());
+    private RecrepLogHelper log;
+    private RecordLogHelper recordLogHelper;
 
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;
@@ -35,6 +33,8 @@ public class Replayer extends AbstractVerticle {
 
     @Override
     public void start() throws Exception {
+        log = new RecrepLogHelper(vertx, Replayer.class.getName());
+        recordLogHelper = new RecordLogHelper(vertx);
         eventPublisher = new EventPublisher(vertx);
         eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
         subscribeToReqrepEvents();
@@ -55,7 +55,7 @@ public class Replayer extends AbstractVerticle {
 
         JsonObject replayJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
 
-        Stream<String> recordFileLines = RecordLogHelper.getRecordLogFileStream(replayJob);
+        Stream<String> recordFileLines = recordLogHelper.getRecordLogFileStream(replayJob);
         if(recordFileLines != null) {
             RecordReadStream<String> recordStream = new RecordReadStream<>(recordFileLines);
             recordStream.exceptionHandler(exceptionHandler);
