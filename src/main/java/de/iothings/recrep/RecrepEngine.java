@@ -55,9 +55,11 @@ public class RecrepEngine extends AbstractVerticle {
         messageConsumerList.add(eventSubscriber.subscribe(startRecordStreamHandler, RecrepEventType.RECORDJOB_REQUEST));
         messageConsumerList.add(eventSubscriber.subscribe(saveRecordJobConfigHandler, RecrepEventType.RECORDJOB_REQUEST));
         messageConsumerList.add(eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED));
+        messageConsumerList.add(eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_CANCEL_REQUEST));
         messageConsumerList.add(eventSubscriber.subscribe(startReplayStreamHandler, RecrepEventType.REPLAYJOB_REQUEST));
         messageConsumerList.add(eventSubscriber.subscribe(saveReplayJobConfigHandler, RecrepEventType.REPLAYJOB_REQUEST));
         messageConsumerList.add(eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED));
+        messageConsumerList.add(eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_CANCEL_REQUEST));
     }
 
     private void startRecordStream(JsonObject event) {
