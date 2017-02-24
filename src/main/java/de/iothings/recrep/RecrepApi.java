@@ -43,108 +43,12 @@ public class RecrepApi extends AbstractVerticle {
         options
             .addInboundPermitted(inboundPermitted)
             .addOutboundPermitted(outboundPermitted);
-        //sockJSHandler.bridge(options);
 
-        vertx.setPeriodic(1000, tick -> {
-                    vertx.eventBus().publish("test","test");
-                }
-        );
+        sockJSHandler.bridge(options);
 
-
-//        router.route("/eventbus/*").handler(SockJSHandler.create(vertx).bridge(options, event -> {
-//
-//            if (event.type() == BridgeEventType.SOCKET_CREATED) {
-//                //clientConnections.put(event.socket().writeHandlerID(), clientConnections.size()+1);
-//                System.out.println("A socket was created " + event.socket().writeHandlerID());
-//                vertx.eventBus().send(event.socket().writeHandlerID(),Buffer.buffer().appendString(event.socket().writeHandlerID()));
-//
-//                JsonObject jsonObject = new JsonObject().put("message","A new client joined");
-//                vertx.setTimer(100, tick -> {
-//                        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.TEST, jsonObject));
-//                    }
-//                );
-//
-//            }
-//
-//            if (event.type() == BridgeEventType.SOCKET_CLOSED) {
-//                //clientConnections.remove(event.socket().writeHandlerID());
-//                System.out.println("A socket was closed " + event.socket().writeHandlerID());
-//            }
-//
-//            if (event.type() == BridgeEventType.PUBLISH) {
-//                System.out.println("A message was published " + event.socket().writeHandlerID());
-//            }
-//
-//            if (event.type() == BridgeEventType.RECEIVE) {
-//                System.out.println("A message was received " + event.socket().writeHandlerID());
-//            }
-//
-//            if (event.type() == BridgeEventType.SEND) {
-//                System.out.println("A message was sent " + event.socket().writeHandlerID());
-//            }
-//
-//            if (event.type() == BridgeEventType.REGISTER) {
-//                System.out.println("A sub was registered " + event.socket().writeHandlerID());
-//            }
-//
-//            if (event.type() == BridgeEventType.UNREGISTER) {
-//                System.out.println("A sub was unregistered " + event.socket().writeHandlerID());
-//            }
-//
-//            // This signals that it's ok to process the event
-//            event.complete(true);
-//
-//        }));
-
-        sockJSHandler.bridge(options, event -> {
-
-            if (event.type() == BridgeEventType.SOCKET_CREATED) {
-                //clientConnections.put(event.socket().writeHandlerID(), clientConnections.size()+1);
-                System.out.println("A socket was created " + event.socket().writeHandlerID());
-                //vertx.eventBus().send(event.socket().writeHandlerID(),Buffer.buffer().appendString(event.socket().writeHandlerID()));
-
-                JsonObject jsonObject = new JsonObject().put("type","rec").put("address",event.socket().writeHandlerID()).put("body",new JsonObject().put("message","A new client joined"));
-
-                event.socket().write(Buffer.buffer().appendString(jsonObject.toString()));
-
-                //vertx.eventBus().send(event.socket().writeHandlerID(),jsonObject);
-
-
-                vertx.setTimer(100, tick -> {
-                        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.TEST, jsonObject));
-                    }
-                );
-
-            }
-
-            if (event.type() == BridgeEventType.SOCKET_CLOSED) {
-                //clientConnections.remove(event.socket().writeHandlerID());
-                System.out.println("A socket was closed " + event.socket().writeHandlerID());
-            }
-
-            if (event.type() == BridgeEventType.PUBLISH) {
-                System.out.println("A message was published " + event.socket().writeHandlerID());
-            }
-
-            if (event.type() == BridgeEventType.RECEIVE) {
-                System.out.println("A message was received " + event.socket().writeHandlerID());
-            }
-
-            if (event.type() == BridgeEventType.SEND) {
-                System.out.println("A message was sent " + event.socket().writeHandlerID());
-            }
-
-            if (event.type() == BridgeEventType.REGISTER) {
-                System.out.println("A sub was registered " + event.socket().writeHandlerID());
-            }
-
-            if (event.type() == BridgeEventType.UNREGISTER) {
-                System.out.println("A sub was unregistered " + event.socket().writeHandlerID());
-            }
-
-            // This signals that it's ok to process the event
-            event.complete(true);
-
+        vertx.eventBus().consumer("register", registration -> {
+            JsonObject reply = new JsonObject().put("action", "response").put("message", "This is a reply.");
+            registration.reply(reply);
         });
 
         //bridge
@@ -152,8 +56,6 @@ public class RecrepApi extends AbstractVerticle {
 
         // Serve the static resources
         router.route().handler(StaticHandler.create());
-
-
 
         server.requestHandler(router::accept).listen(8080);
 

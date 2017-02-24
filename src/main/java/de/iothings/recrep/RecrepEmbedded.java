@@ -29,8 +29,9 @@ public class RecrepEmbedded {
                 RecrepDefaultLogger.class.getName(),
                 RecrepEngine.class.getName(),
                 Replayer.class.getName(),
-                Recorder.class.getName()
+                Recorder.class.getName(),
                 //Api
+                RecrepApi.class.getName()
                 ));
 
         this.orderedDeployables.addAll(orderedDeployables);
