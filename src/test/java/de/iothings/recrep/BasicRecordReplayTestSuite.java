@@ -3,6 +3,7 @@ package de.iothings.recrep;
 import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
 import de.iothings.recrep.pubsub.EventSubscriber;
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -37,7 +38,6 @@ public class BasicRecordReplayTestSuite {
     private String testRecordJobName;
     private String testRecordJobFilePath;
 
-    private List<MessageConsumer> messageConsumerList = new ArrayList<>();
 
     @Before
     public void before(TestContext context) {
@@ -52,16 +52,31 @@ public class BasicRecordReplayTestSuite {
         // delete old files
         cleanup(context);
 
+        // setup dummy record and replay endpoints
+        DeploymentOptions testRecordOptions1 = new DeploymentOptions()
+                .setConfig(new JsonObject()
+                        .put("eventBusAddress", testDataStreamAdress)
+                        .put("interval",1200l));
+
+        rule.vertx().deployVerticle("de.iothings.recrep.TestRecordEndpoint", testRecordOptions1);
+
+        DeploymentOptions testReplayOptions = new DeploymentOptions()
+                .setConfig(new JsonObject()
+                        .put("eventBusAddress", testTargetStreamAdress));
+
+        rule.vertx().deployVerticle("de.iothings.recrep.TestReplayEndpoint", testReplayOptions);
+
+
+        //start recrep engine
         eventPublisher = new EventPublisher(rule.vertx());
         eventSubscriber = new EventSubscriber(rule.vertx(), EventBusAddress.RECREP_EVENTS.toString());
+
         List<String> deployableList = Collections.emptyList();
         RecrepEmbedded recrepEmbedded = new RecrepEmbedded(rule.vertx(), deployableList);
         recrepEmbedded.deploy(finished -> {
             async.complete();
         });
 
-        // start test data stream
-        periodicTestDataId = rule.vertx().setPeriodic(1000, this::sendTestData);
     }
 
     @Test
@@ -78,13 +93,12 @@ public class BasicRecordReplayTestSuite {
         };
 
         Handler<JsonObject> endReplayStreamHandler = endEvent -> {
-
-            messageConsumerList.forEach(MessageConsumer::unregister);
             async.complete();
         };
 
-        messageConsumerList.add(eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED));
-        messageConsumerList.add(eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED));
+        eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED);
+        eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED);
+
     }
 
 
@@ -98,18 +112,15 @@ public class BasicRecordReplayTestSuite {
         });
     }
 
-    private void sendTestData(long tick) {
-        JsonObject jsonObject = new JsonObject().put("index",tick).put("payload",new String(UUID.randomUUID().toString()));
-        rule.vertx().eventBus().publish(testDataStreamAdress, jsonObject);
-    }
-
     private void sendDemoRecordJobRequest() {
         long now = System.currentTimeMillis();
         long start = now + 1000;
         long end = now + 10000;
         JsonArray sources = new JsonArray();
         RecrepEndpointMappingBuilder builder = new RecrepEndpointMappingBuilder();
-        sources.add(builder.withSourceIdentifier(testDataStreamAdress).build());
+        sources.add(
+                builder.withSourceIdentifier(testDataStreamAdress)
+                        .build());
 
         JsonObject recordJob = new JsonObject();
         recordJob.put(RecrepRecordJobFields.NAME, testRecordJobName);
@@ -127,9 +138,6 @@ public class BasicRecordReplayTestSuite {
             RecrepEndpointMappingBuilder builder = new RecrepEndpointMappingBuilder();
             JsonObject targetMapping = builder.withStage(stage).withSourceIdentifier(testDataStreamAdress).withTargetIdentifier(testTargetStreamAdress).build();
             targetMappings.add(targetMapping);
-            messageConsumerList.add(rule.vertx().eventBus().consumer(targetMapping.getString(RecrepEndpointMappingFields.TARGET_IDENTIFIER), message -> {
-                System.out.println("Replay Message: " + System.currentTimeMillis() + " - " + message.body());
-            }));
         });
 
         JsonObject replayJob = new JsonObject();

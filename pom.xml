@@ -18,7 +18,7 @@
     </scm>
 
     <properties>
-        <version.vertx>3.3.3</version.vertx>
+        <version.vertx>3.4.0</version.vertx>
         <version.log4j>2.7</version.log4j>
         <version.junit>4.12</version.junit>
         <version.commons.io>2.5</version.commons.io>

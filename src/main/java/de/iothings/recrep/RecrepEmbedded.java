@@ -30,22 +30,16 @@ public class RecrepEmbedded {
                 RecrepEngine.class.getName(),
                 Replayer.class.getName(),
                 Recorder.class.getName(),
-                //Api
-                RecrepApi.class.getName()
-                ));
+                RecrepApi.class.getName()));
 
         this.orderedDeployables.addAll(orderedDeployables);
     }
 
-    public void deploy(Handler<AsyncResultHandler<Void>> deploymentFinished) {
+    public void deploy(Handler<Void> deploymentFinished) {
         deployNext(deploymentFinished);
     }
 
-    public void deploy() {
-        deployNext(null);
-    }
-
-    private void deployNext(Handler<AsyncResultHandler<Void>> deploymentFinished) {
+    private void deployNext(Handler<Void> deploymentFinished) {
         Handler<AsyncResult<String>> deployNextHandler = stringAsyncResult -> deployNext(deploymentFinished);
         if(orderedDeployables.size() > deploymentIndex) {
             log.info("Deploying " + orderedDeployables.get(deploymentIndex));
