@@ -8,6 +8,7 @@ import de.iothings.recrep.pubsub.EventPublisher;
 import de.iothings.recrep.pubsub.EventSubscriber;
 import de.iothings.recrep.state.RecrepJobRegistry;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.eventbus.MessageProducer;
@@ -98,7 +99,22 @@ public class RecrepEngine extends AbstractVerticle {
             JsonObject targetMapping = (JsonObject) mapping;
             String sourceIdentifier = targetMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER);
             String targetIdentifier = targetMapping.getString(RecrepEndpointMappingFields.TARGET_IDENTIFIER);
-            messageProducers.put(sourceIdentifier, vertx.eventBus().sender(targetIdentifier));
+            String handler = targetMapping.getString(RecrepEndpointMappingFields.HANDLER);
+            String replayJobName = replayJob.getString(RecrepReplayJobFields.NAME);
+
+            DeploymentOptions deploymentOptions = new DeploymentOptions()
+                    .setConfig(
+                            new JsonObject()
+                                    .put(RecrepReplayJobFields.NAME, replayJob.getString(RecrepReplayJobFields.NAME))
+                                    .put(RecrepEndpointMappingFields.STAGE, targetMapping.getString(RecrepEndpointMappingFields.STAGE))
+                                    .put(RecrepEndpointMappingFields.HANDLER, targetMapping.getString(RecrepEndpointMappingFields.HANDLER))
+                                    .put(RecrepEndpointMappingFields.SOURCE_IDENTIFIER, targetMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER))
+                                    .put(RecrepEndpointMappingFields.TARGET_IDENTIFIER, targetMapping.getString(RecrepEndpointMappingFields.TARGET_IDENTIFIER)));
+
+            vertx.deployVerticle(targetMapping.getString(RecrepEndpointMappingFields.HANDLER), deploymentOptions, deployementResult -> {
+                RecrepJobRegistry.registerReplayStreamHandler(replayJob.getString(RecrepReplayJobFields.NAME), deployementResult.result());
+                messageProducers.put(sourceIdentifier, vertx.eventBus().sender(replayJobName + "_" + sourceIdentifier));
+            });
 
         });
 
@@ -130,6 +146,11 @@ public class RecrepEngine extends AbstractVerticle {
     private void endReplayStream(JsonObject event) {
         JsonObject replayJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
         RecrepJobRegistry.unregisterReplayStreamConsumer(replayJob.getString(RecrepReplayJobFields.NAME));
+
+        ArrayList<String> deploymentIds = RecrepJobRegistry.unregisterReplayStreamHandler(replayJob.getString(RecrepReplayJobFields.NAME));
+        deploymentIds.forEach(deploymentID -> {
+            vertx.undeploy(deploymentID);
+        });
         eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYSTREAM_ENDED, replayJob));
     }
 

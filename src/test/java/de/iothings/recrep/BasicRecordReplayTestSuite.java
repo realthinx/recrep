@@ -33,7 +33,8 @@ public class BasicRecordReplayTestSuite {
     private long periodicTestDataId;
 
     private String stage;
-    private String testDataStreamAdress;
+    private String testDataStreamAdress1;
+    private String testDataStreamAdress2;
     private String testTargetStreamAdress;
     private String testRecordJobName;
     private String testRecordJobFilePath;
@@ -44,27 +45,14 @@ public class BasicRecordReplayTestSuite {
         Async async = context.async();
 
         stage = "TEST";
-        testDataStreamAdress = "testdata_in";
+        testDataStreamAdress1 = "testdata_in_1";
+        testDataStreamAdress2 = "testdata_in_2";
         testTargetStreamAdress = "testdata_replay";
         testRecordJobName = "recording_job_" + UUID.randomUUID().toString();
         testRecordJobFilePath = "./.temp";
 
         // delete old files
         cleanup(context);
-
-        // setup dummy record and replay endpoints
-        DeploymentOptions testRecordOptions1 = new DeploymentOptions()
-                .setConfig(new JsonObject()
-                        .put("eventBusAddress", testDataStreamAdress)
-                        .put("interval",1200l));
-
-        rule.vertx().deployVerticle("de.iothings.recrep.TestRecordEndpoint", testRecordOptions1);
-
-        DeploymentOptions testReplayOptions = new DeploymentOptions()
-                .setConfig(new JsonObject()
-                        .put("eventBusAddress", testTargetStreamAdress));
-
-        rule.vertx().deployVerticle("de.iothings.recrep.TestReplayEndpoint", testReplayOptions);
 
 
         //start recrep engine
@@ -93,7 +81,10 @@ public class BasicRecordReplayTestSuite {
         };
 
         Handler<JsonObject> endReplayStreamHandler = endEvent -> {
-            async.complete();
+            rule.vertx().setTimer(2000, tick -> {
+                async.complete();
+            });
+
         };
 
         eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED);
@@ -117,9 +108,19 @@ public class BasicRecordReplayTestSuite {
         long start = now + 1000;
         long end = now + 10000;
         JsonArray sources = new JsonArray();
-        RecrepEndpointMappingBuilder builder = new RecrepEndpointMappingBuilder();
+        RecrepEndpointMappingBuilder builder1 = new RecrepEndpointMappingBuilder();
+        RecrepEndpointMappingBuilder builder2 = new RecrepEndpointMappingBuilder();
         sources.add(
-                builder.withSourceIdentifier(testDataStreamAdress)
+                builder1
+                        .withSourceIdentifier(testDataStreamAdress1)
+                        .withHandler(TestRecordEndpoint.class.getName())
+                        .withStage("DEV")
+                        .build());
+        sources.add(
+                builder2
+                        .withSourceIdentifier(testDataStreamAdress2)
+                        .withHandler(TestRecordEndpoint.class.getName())
+                        .withStage("DEV")
                         .build());
 
         JsonObject recordJob = new JsonObject();
@@ -135,9 +136,15 @@ public class BasicRecordReplayTestSuite {
 
         JsonArray targetMappings = new JsonArray();
         recordJob.getJsonArray(RecrepRecordJobFields.SOURCE_MAPPINGS).forEach(source -> {
-            RecrepEndpointMappingBuilder builder = new RecrepEndpointMappingBuilder();
-            JsonObject targetMapping = builder.withStage(stage).withSourceIdentifier(testDataStreamAdress).withTargetIdentifier(testTargetStreamAdress).build();
-            targetMappings.add(targetMapping);
+            JsonObject sourceMapping = (JsonObject) source;
+            RecrepEndpointMappingBuilder builder1 = new RecrepEndpointMappingBuilder();
+            JsonObject targetMapping1 = builder1
+                    .withStage(sourceMapping.getString(RecrepEndpointMappingFields.STAGE))
+                    .withSourceIdentifier(sourceMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER))
+                    .withTargetIdentifier(testTargetStreamAdress)
+                    .withHandler(TestReplayEndpoint.class.getName())
+                    .build();
+            targetMappings.add(targetMapping1);
         });
 
         JsonObject replayJob = new JsonObject();
