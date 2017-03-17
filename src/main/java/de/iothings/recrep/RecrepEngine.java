@@ -7,22 +7,27 @@ import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
 import de.iothings.recrep.pubsub.EventSubscriber;
 import de.iothings.recrep.state.RecrepJobRegistry;
+import de.iothings.recrep.state.RecrepStore;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.eventbus.MessageProducer;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class RecrepEngine extends AbstractVerticle {
 
     private RecrepLogHelper log;
     private RecordLogHelper recordLogHelper;
+
+    private RecrepStore recrepStore;
 
     private final Handler<JsonObject> startRecordStreamHandler = this::startRecordStream;
     private final Handler<JsonObject> saveRecordJobConfigHandler = this::saveJobConfig;
@@ -42,7 +47,9 @@ public class RecrepEngine extends AbstractVerticle {
         recordLogHelper = new RecordLogHelper(vertx);
         eventPublisher = new EventPublisher(vertx);
         eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
+        recrepStore = new RecrepStore(vertx);
         subscribeToReqrepEvents();
+        initializeStore();
         log.info("Started " + this.getClass().getName());
     }
 
@@ -61,6 +68,13 @@ public class RecrepEngine extends AbstractVerticle {
         messageConsumerList.add(eventSubscriber.subscribe(saveReplayJobConfigHandler, RecrepEventType.REPLAYJOB_REQUEST));
         messageConsumerList.add(eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED));
         messageConsumerList.add(eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_CANCEL_REQUEST));
+    }
+
+    private void initializeStore() {
+        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.STATE_UPDATE,
+                new JsonObject()
+                    .put("action","RECORDJOB_INVENTORY")
+                    .put("payload", new JsonArray(JobConfigHelper.getJobConfigStream("./.temp").collect(Collectors.toList())))));
     }
 
     private void startRecordStream(JsonObject event) {

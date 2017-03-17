@@ -46,11 +46,6 @@ public class RecrepApi extends AbstractVerticle {
 
         sockJSHandler.bridge(options);
 
-        vertx.eventBus().consumer(EventBusAddress.STATE_REQUEST.toString(), registration -> {
-            JsonObject reply = new JsonObject().put("action", "response").put("message", "This is a reply.");
-            registration.reply(reply);
-        });
-
         //bridge
         router.route("/eventbus/*").handler(sockJSHandler);
 

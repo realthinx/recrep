@@ -17,6 +17,6 @@ public enum RecrepEventType {
     REPLAYJOB_CANCEL_REQUEST,
     REPLAYJOB_STARTED,
     REPLAYJOB_FINISHED,
-    TEST
+    STATE_UPDATE
 
 }

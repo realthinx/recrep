@@ -5,6 +5,7 @@ import de.iothings.recrep.model.RecrepEventFields;
 import de.iothings.recrep.model.RecrepEventType;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;

@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.stream.Stream;
 
 /**
@@ -29,6 +30,10 @@ public class JobConfigHelper {
         } catch (IOException e) {
             log.error("Failed to save job config file: " + e.getMessage());
         }
+    }
+
+    public static Stream<JsonObject> getJobConfigStream(String baseDirectory) {
+        return  getJobConfigStream(new ArrayList<String>(Arrays.asList(new String[] { baseDirectory})));
     }
 
     public static Stream<JsonObject> getJobConfigStream(ArrayList<String> baseDirectories) {
