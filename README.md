@@ -1,6 +1,6 @@
 # RecRep
 
-*Event Stream Record and Replay Engine*
+*Datastream Record and Replay Engine*
 
 Record and replay datastreams from event based applications and infrastructures:
 
@@ -13,7 +13,7 @@ Record and replay datastreams from event based applications and infrastructures:
 - Flexible mapping of recorded input endpoints to output enpoints for replay jobs
 - Terminated record job windows
 - Terminated replay job windows
-- Infinite record job windows with buffered rollover strategy
+- Infinite recording with buffered rollover strategy
 - Overlay and inject additional data streams to your recorded data stream on replay
 - Ad-hoc or scheduled record job creation
 - Ad-hoc or scheduled replay job creation
@@ -23,6 +23,7 @@ Record and replay datastreams from event based applications and infrastructures:
 
 - Functional, regression and performance testing of event based applications and infrastructures
 - Reproducible simulation of event stream scenarios
+- Replay datastreams from production environment to develeopment or qa stages
 - Continuous event recording for resiliency enhancement
 - Audit event streams
 
