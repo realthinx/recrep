@@ -1,5 +1,6 @@
 package de.iothings.recrep.model;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -25,7 +26,7 @@ public class RecrepEventBuilder {
         return this;
     }
 
-    public RecrepEventBuilder withPayload(JsonObject payload) {
+    public RecrepEventBuilder withPayload(Object payload) {
         this.event.put(RecrepEventFields.PAYLOAD, payload);
         return this;
     }

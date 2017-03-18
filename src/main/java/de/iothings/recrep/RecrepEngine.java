@@ -38,6 +38,7 @@ public class RecrepEngine extends AbstractVerticle {
     private final Handler<JsonObject> startReplayStreamHandler = this::startReplayStream;
     private final Handler<JsonObject> saveReplayJobConfigHandler = this::saveJobConfig;
     private final Handler<JsonObject> endReplayStreamHandler = this::endReplayStream;
+    private final Handler<JsonObject> configurationStreamHandler = this::handleConfigurationStream;
 
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;
@@ -52,7 +53,6 @@ public class RecrepEngine extends AbstractVerticle {
         eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
         recrepStore = new RecrepStore(vertx);
         subscribeToReqrepEvents();
-        initializeStore();
         initializeConfiguration();
         log.info("Started " + this.getClass().getName());
     }
@@ -72,6 +72,7 @@ public class RecrepEngine extends AbstractVerticle {
         messageConsumerList.add(eventSubscriber.subscribe(saveReplayJobConfigHandler, RecrepEventType.REPLAYJOB_REQUEST));
         messageConsumerList.add(eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED));
         messageConsumerList.add(eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_CANCEL_REQUEST));
+        messageConsumerList.add(eventSubscriber.subscribe(configurationStreamHandler, RecrepEventType.CONFIGURATION_UPDATE));
     }
 
     private void initializeConfiguration() {
@@ -84,21 +85,23 @@ public class RecrepEngine extends AbstractVerticle {
 
         ConfigRetriever retriever = ConfigRetriever.create(vertx, options);
 
-        retriever.getConfig(json -> {
-            eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.CONFIGURATION_UPDATE, json.result()));
+        retriever.getConfig(config -> {
+            eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.CONFIGURATION_UPDATE,
+                    config.result()));
         });
 
         retriever.listen(change -> {
-            eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.CONFIGURATION_UPDATE, change.getNewConfiguration()));
+            eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.CONFIGURATION_UPDATE,
+                    change.getNewConfiguration()));
         });
 
     }
 
-    private void initializeStore() {
-        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.STATE_UPDATE,
-                new JsonObject()
-                    .put("action","RECORDJOB_INVENTORY")
-                    .put("payload", new JsonArray(JobConfigHelper.getJobConfigStream("./.temp").collect(Collectors.toList())))));
+    private void handleConfigurationStream(JsonObject event) {
+        JsonObject configuration = event.getJsonObject(RecrepEventFields.PAYLOAD);
+        ArrayList<String> diretories = new ArrayList<>(configuration.getJsonObject("inventory").getJsonArray("directories").getList());
+        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_INVENTORY,
+                new JsonObject().put("recordJobs", new JsonArray(JobConfigHelper.getJobConfigStream(diretories).collect(Collectors.toList())))));
     }
 
     private void startRecordStream(JsonObject event) {

@@ -2,6 +2,7 @@ package de.iothings.recrep.state;
 
 import de.iothings.recrep.common.RecrepLogHelper;
 import de.iothings.recrep.model.EventBusAddress;
+import de.iothings.recrep.model.RecrepEventFields;
 import de.iothings.recrep.model.RecrepEventType;
 import de.iothings.recrep.model.RecrepRecordJobFields;
 import de.iothings.recrep.pubsub.EventPublisher;
@@ -9,6 +10,7 @@ import de.iothings.recrep.pubsub.EventSubscriber;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 import java.util.ArrayList;
@@ -24,8 +26,10 @@ public class RecrepStore {
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;
 
-    private final Handler<JsonObject> recrepInventoryUpdateHandler = this::handleInventoryUpdate;
+    private final Handler<JsonObject> recrepJobInventoryUpdateHandler = this::handleJobInventoryUpdate;
     private final Handler<JsonObject> recrepConfigurationUpdateHandler = this::handleConfigurationUpdate;
+
+
     private final Handler<Message<JsonObject>> recrepStateRequestHandler = this::handleStateRequest;
 
     private JsonObject recrepConfiguration = new JsonObject();
@@ -43,30 +47,31 @@ public class RecrepStore {
         this.log = new RecrepLogHelper(vertx, RecrepStore.class.getName());
         this.eventPublisher = new EventPublisher(vertx);
         this.eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
-        this.eventSubscriber.subscribe(recrepInventoryUpdateHandler, RecrepEventType.STATE_UPDATE);
-        this.eventSubscriber.subscribe(recrepConfigurationUpdateHandler, RecrepEventType.CONFIGURATION_UPDATE);
-        this.vertx.eventBus().consumer(EventBusAddress.STATE_REQUEST.toString(), recrepStateRequestHandler);
+        subscribeToReqrepEvents();
     }
 
-    private void handleInventoryUpdate(JsonObject update) {
-        String type = update.getJsonObject("payload").getString("action");
+    private void subscribeToReqrepEvents() {
 
-        switch (type) {
-            case "RECORDJOB_INVENTORY":
-                log.info("Received State update: " + update.toString());
-                update.getJsonObject("payload").getJsonArray("payload").forEach( recordJob -> {
-                    recordJobs.put(((JsonObject) recordJob).getString(RecrepRecordJobFields.NAME), (JsonObject) recordJob);
-                } );
-        }
+        this.vertx.eventBus().consumer(EventBusAddress.STATE_REQUEST.toString(), recrepStateRequestHandler);
 
-        log.info("State after State update: " + createStateSnapshot());
+        this.eventSubscriber.subscribe(recrepJobInventoryUpdateHandler, RecrepEventType.RECORDJOB_INVENTORY);
+        this.eventSubscriber.subscribe(recrepConfigurationUpdateHandler, RecrepEventType.CONFIGURATION_UPDATE);
+    }
+
+    private void handleJobInventoryUpdate(JsonObject update) {
+        log.info("Received state update: " + update.toString());
+        update.getJsonObject(RecrepEventFields.PAYLOAD).getJsonArray("recordJobs").forEach(recordJob -> {
+            recordJobs.put(((JsonObject) recordJob).getString(RecrepRecordJobFields.NAME), (JsonObject) recordJob);
+        } );
+        log.info("State after state update: " + createStateSnapshot());
     }
 
     private void handleConfigurationUpdate(JsonObject update) {
-        log.info("Received Configuration update: " + update.toString());
-        recrepConfiguration = update.getJsonObject("payload");
-        log.info("State after Configuration update: " + createStateSnapshot());
+        log.info("Received configuration  update: " + update.toString());
+        recrepConfiguration = update.getJsonObject(RecrepEventFields.PAYLOAD);
+        log.info("State after configuration update: " + createStateSnapshot());
     }
+
 
     private void handleStateRequest(Message statRequest) {
         statRequest.reply(createStateSnapshot());
