@@ -1,5 +1,6 @@
 package de.iothings.recrep.stream;
 
+import de.iothings.recrep.model.RecrepRecordMessageFields;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageProducer;
@@ -114,9 +115,9 @@ public class TimelineWriteStream implements WriteStream<String> {
     private JsonObject parse(String recordLine) {
         JsonObject jsonObject = new JsonObject();
         String[] recordLineChunks = recordLine.split("\\|");
-        jsonObject.put("timestamp", Long.valueOf(recordLineChunks[0]));
-        jsonObject.put("source", recordLineChunks[1]);
-        jsonObject.put("payload", recordLineChunks[2]);
+        jsonObject.put(RecrepRecordMessageFields.TIMESTAMP, Long.valueOf(recordLineChunks[0]));
+        jsonObject.put(RecrepRecordMessageFields.SOURCE, recordLineChunks[1]);
+        jsonObject.put(RecrepRecordMessageFields.PAYLOAD, recordLineChunks[2]);
         return jsonObject;
     }
 

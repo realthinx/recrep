@@ -22,7 +22,6 @@ import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.stream.Collectors;
 
 public class RecrepEngine extends AbstractVerticle {
@@ -36,14 +35,11 @@ public class RecrepEngine extends AbstractVerticle {
     private final Handler<JsonObject> saveRecordJobConfigHandler = this::saveJobConfig;
     private final Handler<JsonObject> endRecordStreamHandler = this::endRecordStream;
     private final Handler<JsonObject> startReplayStreamHandler = this::startReplayStream;
-    private final Handler<JsonObject> saveReplayJobConfigHandler = this::saveJobConfig;
     private final Handler<JsonObject> endReplayStreamHandler = this::endReplayStream;
     private final Handler<JsonObject> configurationStreamHandler = this::handleConfigurationStream;
 
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;
-
-    private List<MessageConsumer> messageConsumerList = new ArrayList<>();
 
     @Override
     public void start() throws Exception {
@@ -59,20 +55,18 @@ public class RecrepEngine extends AbstractVerticle {
 
     @Override
     public void stop() throws Exception {
-        messageConsumerList.forEach(MessageConsumer::unregister);
         log.info("Stopped " + this.getClass().getName());
     }
 
     private void subscribeToReqrepEvents() {
-        messageConsumerList.add(eventSubscriber.subscribe(startRecordStreamHandler, RecrepEventType.RECORDJOB_REQUEST));
-        messageConsumerList.add(eventSubscriber.subscribe(saveRecordJobConfigHandler, RecrepEventType.RECORDJOB_REQUEST));
-        messageConsumerList.add(eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED));
-        messageConsumerList.add(eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_CANCEL_REQUEST));
-        messageConsumerList.add(eventSubscriber.subscribe(startReplayStreamHandler, RecrepEventType.REPLAYJOB_REQUEST));
-        messageConsumerList.add(eventSubscriber.subscribe(saveReplayJobConfigHandler, RecrepEventType.REPLAYJOB_REQUEST));
-        messageConsumerList.add(eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED));
-        messageConsumerList.add(eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_CANCEL_REQUEST));
-        messageConsumerList.add(eventSubscriber.subscribe(configurationStreamHandler, RecrepEventType.CONFIGURATION_UPDATE));
+        eventSubscriber.subscribe(startRecordStreamHandler, RecrepEventType.RECORDJOB_REQUEST);
+        eventSubscriber.subscribe(saveRecordJobConfigHandler, RecrepEventType.RECORDJOB_REQUEST);
+        eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED);
+        eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_CANCEL_REQUEST);
+        eventSubscriber.subscribe(startReplayStreamHandler, RecrepEventType.REPLAYJOB_REQUEST);
+        eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED);
+        eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_CANCEL_REQUEST);
+        eventSubscriber.subscribe(configurationStreamHandler, RecrepEventType.CONFIGURATION_UPDATE);
     }
 
     private void initializeConfiguration() {
@@ -138,10 +132,6 @@ public class RecrepEngine extends AbstractVerticle {
         HashMap<String, MessageProducer<JsonObject>> messageProducers = new HashMap<>();
         replayJob.getJsonArray(RecrepReplayJobFields.TARGET_MAPPINGS).forEach(mapping -> {
             JsonObject targetMapping = (JsonObject) mapping;
-            String sourceIdentifier = targetMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER);
-            String targetIdentifier = targetMapping.getString(RecrepEndpointMappingFields.TARGET_IDENTIFIER);
-            String handler = targetMapping.getString(RecrepEndpointMappingFields.HANDLER);
-            String replayJobName = replayJob.getString(RecrepReplayJobFields.NAME);
 
             DeploymentOptions deploymentOptions = new DeploymentOptions()
                     .setConfig(
@@ -154,17 +144,20 @@ public class RecrepEngine extends AbstractVerticle {
 
             vertx.deployVerticle(targetMapping.getString(RecrepEndpointMappingFields.HANDLER), deploymentOptions, deployementResult -> {
                 RecrepJobRegistry.registerReplayStreamHandler(replayJob.getString(RecrepReplayJobFields.NAME), deployementResult.result());
-                messageProducers.put(sourceIdentifier, vertx.eventBus().sender(replayJobName + "_" + sourceIdentifier));
+                messageProducers.put(targetMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER),
+                        vertx.eventBus().sender(
+                                replayJob.getString(RecrepReplayJobFields.NAME) + "_"
+                                        + targetMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER)));
             });
 
         });
 
         MessageConsumer<JsonObject> replayStream = vertx.eventBus().consumer(replayJob.getString(RecrepReplayJobFields.NAME), message -> {
             JsonObject recordLine = message.body();
-            String source = recordLine.getString("source");
+            String source = recordLine.getString(RecrepRecordMessageFields.SOURCE);
             MessageProducer producer = messageProducers.get(source);
             if(producer != null) {
-                producer.send(decodeObject(recordLine.getString("payload")));
+                producer.send(decodeObject(recordLine.getString(RecrepRecordMessageFields.PAYLOAD)));
             }
         });
 

@@ -1,16 +1,12 @@
 package de.iothings.recrep.state;
 
 import de.iothings.recrep.common.RecrepLogHelper;
-import de.iothings.recrep.model.EventBusAddress;
-import de.iothings.recrep.model.RecrepEventFields;
-import de.iothings.recrep.model.RecrepEventType;
-import de.iothings.recrep.model.RecrepRecordJobFields;
+import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
 import de.iothings.recrep.pubsub.EventSubscriber;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 import java.util.ArrayList;
