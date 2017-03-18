@@ -3,10 +3,8 @@ package de.iothings.recrep;
 import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
 import de.iothings.recrep.pubsub.EventSubscriber;
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -23,7 +21,7 @@ import java.util.*;
 
 
 @RunWith(VertxUnitRunner.class)
-public class BasicRecordReplayTestSuite {
+public class BasicRecordReplayTest {
 
     @Rule
     public RunTestOnContext rule = new RunTestOnContext();

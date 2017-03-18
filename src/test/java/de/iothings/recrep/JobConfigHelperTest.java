@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 /**
  * Created by ue60219 on 13.02.2017.
  */
-public class JobConfigHelperTestSuite {
+public class JobConfigHelperTest {
 
     private String[] paths = new String[] { "./.temp1", "./.temp2", "./.temp3" };
 
