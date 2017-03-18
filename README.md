@@ -6,12 +6,13 @@ Record and replay datastreams from event based applications and infrastructures:
 
 - Record one or several concurrent datastreams in one or more record jobs
 - Create an inventory with reproducible test sets of recorded datastream windows
-- Replay your recorded test sets in the same time sequence as they were recorded
-- Replay your recorded test sets with various velocities
+- Replay your recorded datastreams in the same time sequence as they were recorded
+- Replay your recorded datastreams with various velocities
 - Pluggable input and output endpoints
-- Flexible mapping of input endpoints to recording
-- Flexible mapping of recorded input endpoints to output enpoints for replaying
+- Flexible mapping of input endpoints to record jobs
+- Flexible mapping of recorded input endpoints to output enpoints for replay jobs
 - Terminated record job windows
+- Terminated replay job windows
 - Infinite record job windows with buffered rollover strategy
 - Overlay and inject additional data streams to your recorded data stream on replay
 - Ad-hoc or scheduled record job creation
@@ -20,9 +21,7 @@ Record and replay datastreams from event based applications and infrastructures:
 
 ## What is it for?
 
-- Functional testing of event based applications and infrastructures
-- Regression testing of event based applications and infrastructures
-- Performance testing
+- Functional, regression and performance testing of event based applications and infrastructures
 - Reproducible simulation of event stream scenarios
 - Continuous event recording for resiliency enhancement
 - Audit event streams
