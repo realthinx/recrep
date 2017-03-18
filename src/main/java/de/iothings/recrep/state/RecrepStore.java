@@ -23,8 +23,12 @@ public class RecrepStore {
     private Vertx vertx;
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;
-    private final Handler<JsonObject> recrepStateUpdateHandler = this::handleStateUpdate;
+
+    private final Handler<JsonObject> recrepInventoryUpdateHandler = this::handleInventoryUpdate;
+    private final Handler<JsonObject> recrepConfigurationUpdateHandler = this::handleConfigurationUpdate;
     private final Handler<Message<JsonObject>> recrepStateRequestHandler = this::handleStateRequest;
+
+    private JsonObject recrepConfiguration = new JsonObject();
 
     private HashMap<String, JsonObject> recordJobs = new HashMap<>();
     private HashMap<String, JsonObject> scheduledRecordJobs = new HashMap<>();
@@ -39,11 +43,12 @@ public class RecrepStore {
         this.log = new RecrepLogHelper(vertx, RecrepStore.class.getName());
         this.eventPublisher = new EventPublisher(vertx);
         this.eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
-        this.eventSubscriber.subscribe(recrepStateUpdateHandler, RecrepEventType.STATE_UPDATE);
+        this.eventSubscriber.subscribe(recrepInventoryUpdateHandler, RecrepEventType.STATE_UPDATE);
+        this.eventSubscriber.subscribe(recrepConfigurationUpdateHandler, RecrepEventType.CONFIGURATION_UPDATE);
         this.vertx.eventBus().consumer(EventBusAddress.STATE_REQUEST.toString(), recrepStateRequestHandler);
     }
 
-    private void handleStateUpdate(JsonObject update) {
+    private void handleInventoryUpdate(JsonObject update) {
         String type = update.getJsonObject("payload").getString("action");
 
         switch (type) {
@@ -54,7 +59,13 @@ public class RecrepStore {
                 } );
         }
 
-        log.info("State after update: " + createStateSnapshot());
+        log.info("State after State update: " + createStateSnapshot());
+    }
+
+    private void handleConfigurationUpdate(JsonObject update) {
+        log.info("Received Configuration update: " + update.toString());
+        recrepConfiguration = update.getJsonObject("payload");
+        log.info("State after Configuration update: " + createStateSnapshot());
     }
 
     private void handleStateRequest(Message statRequest) {
@@ -67,7 +78,8 @@ public class RecrepStore {
             .put("scheduledRecordJobs",new ArrayList<JsonObject>(scheduledRecordJobs.values()))
             .put("runningRecordJobs", new ArrayList<JsonObject>(runningRecordJobs.values()))
             .put("scheduledReplayJobs", new ArrayList<JsonObject>(scheduledReplayJobs.values()))
-            .put("runningReplayJobs", new ArrayList<JsonObject>(runningReplayJobs.values()));
+            .put("runningReplayJobs", new ArrayList<JsonObject>(runningReplayJobs.values()))
+            .put("recrepConfiguration", recrepConfiguration);
     }
 
 

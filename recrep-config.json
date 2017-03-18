@@ -1,0 +1,27 @@
+{
+  "inventory": {
+    "directories": [
+      "./.temp"
+    ]
+  },
+  "recordEndpoints": [
+    {
+      "stage": "DEV",
+      "handler": "de.iothings.recrep.TestRecordEndpoint",
+      "handlerLabel": "Dummy Record Endpoint",
+      "sourceIdentifier": "testdata_in_1",
+      "sourceIdentifierLabel": "Dummy Record Resource 1",
+      "properties": { }
+    }
+  ],
+  "replayEndpoints": [
+    {
+      "stage": "DEV",
+      "handler": "de.iothings.recrep.TestReplayEndpoint",
+      "handlerLabel": "Dummy Replay Endpoint",
+      "targetIdentifier": "testdata_replay_1",
+      "targetIdentifierLabel": "Dummy Replay Resource 1",
+      "properties": { }
+    }
+  ]
+}

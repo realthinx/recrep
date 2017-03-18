@@ -18,7 +18,7 @@
     </scm>
 
     <properties>
-        <version.vertx>3.4.0</version.vertx>
+        <version.vertx>3.4.1</version.vertx>
         <version.log4j>2.7</version.log4j>
         <version.junit>4.12</version.junit>
         <version.commons.io>2.5</version.commons.io>
@@ -35,17 +35,17 @@
           <version>${version.vertx}</version>
         </dependency>
 
-        <!-- vert.x rx-java -->
-        <dependency>
-            <groupId>io.vertx</groupId>
-            <artifactId>vertx-rx-java</artifactId>
-            <version>${version.vertx}</version>
-        </dependency>
-
         <!-- vert.x web -->
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-web</artifactId>
+            <version>${version.vertx}</version>
+        </dependency>
+
+        <!-- vert.x config -->
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-config</artifactId>
             <version>${version.vertx}</version>
         </dependency>
 

@@ -14,7 +14,7 @@ Record and replay datastreams from event based applications and infrastructures:
 - Terminated record job windows
 - Terminated replay job windows
 - Infinite recording with buffered rollover strategy
-- Overlay and inject additional data streams to your recorded data stream on replay
+- Overlay and inject additional datastream snapshots to your recorded data stream on replay
 - Ad-hoc or scheduled record job creation
 - Ad-hoc or scheduled replay job creation
 - Web-UI to control and monitor your record and replay job inventory 
