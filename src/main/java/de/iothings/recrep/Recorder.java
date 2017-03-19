@@ -1,5 +1,6 @@
 package de.iothings.recrep;
 
+import de.iothings.recrep.common.EndpointConfigHelper;
 import de.iothings.recrep.common.RecrepLogHelper;
 import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
@@ -21,8 +22,10 @@ public class Recorder extends AbstractVerticle {
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;
     private List<MessageConsumer> messageConsumerList = new ArrayList<>();
+    private JsonObject recrepConfiguration;
 
     private Handler<JsonObject> startRecordJobHandler = event -> startRecordJob(event);
+    private Handler<JsonObject> configurationUpdateHandler = this::handleConfigurationUpdate;
 
     @Override
     public void start() throws Exception {
@@ -30,6 +33,8 @@ public class Recorder extends AbstractVerticle {
         eventPublisher = new EventPublisher(vertx);
         eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
         messageConsumerList.add(eventSubscriber.subscribe(startRecordJobHandler, RecrepEventType.RECORDSTREAM_CREATED));
+        subscribeToReqrepEvents();
+        initializeConfiguration();
         log.info("Started " + this.getClass().getName());
     }
 
@@ -40,12 +45,24 @@ public class Recorder extends AbstractVerticle {
         log.info("Stopped " + this.getClass().getName());
     }
 
+    private void initializeConfiguration() {
+        vertx.eventBus().send(EventBusAddress.CONFIGURATION_REQUEST.toString(), new JsonObject(), configurationReply -> {
+            recrepConfiguration = (JsonObject) configurationReply.result().body();
+        });
+    }
+
+    private void subscribeToReqrepEvents() {
+        eventSubscriber.subscribe(configurationUpdateHandler, RecrepEventType.CONFIGURATION_UPDATE);
+    }
+
+    private void handleConfigurationUpdate(JsonObject event) {
+        recrepConfiguration = event.getJsonObject(RecrepEventFields.PAYLOAD);
+    }
+
     private void startRecordJob(JsonObject event) {
 
         JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
         final ArrayList<MessageConsumer<JsonObject>> dataStreamConsumer = new ArrayList<>();
-        //final ArrayList<String> recordStreamHandler = new ArrayList<>();
-        //final MessageConsumer<JsonObject>[] dataStreamConsumer = new MessageConsumer[recordJob.getJsonArray(RecrepRecordJobFields.SOURCES).size()];
 
         long now = System.currentTimeMillis();
         long start = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_START) - now;
@@ -58,19 +75,35 @@ public class Recorder extends AbstractVerticle {
                 recordJob.getJsonArray(RecrepRecordJobFields.SOURCE_MAPPINGS).forEach((mapping -> {
                     JsonObject sourceMapping = (JsonObject) mapping;
 
-                    DeploymentOptions deploymentOptions = new DeploymentOptions()
-                            .setConfig(
-                                    new JsonObject()
-                                        .put(RecrepRecordJobFields.NAME, recordJob.getString(RecrepRecordJobFields.NAME))
-                                        .put(RecrepEndpointMappingFields.STAGE, sourceMapping.getString(RecrepEndpointMappingFields.STAGE))
-                                        .put(RecrepEndpointMappingFields.HANDLER, sourceMapping.getString(RecrepEndpointMappingFields.HANDLER))
-                                        .put(RecrepEndpointMappingFields.SOURCE_IDENTIFIER, sourceMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER)));
+                    JsonObject endpointConfig = EndpointConfigHelper.lookupRecordHandlerProperties(recrepConfiguration,
+                            sourceMapping.getString(RecrepEndpointMappingFields.HANDLER),
+                            sourceMapping.getString(RecrepEndpointMappingFields.STAGE),
+                            sourceMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER));
 
-                    log.debug("Create consumer for address " + sourceMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER));
+                    if(endpointConfig != null) {
+                        DeploymentOptions deploymentOptions = new DeploymentOptions()
+                                .setConfig(
+                                        new JsonObject()
+                                                .put(RecrepRecordJobFields.NAME, recordJob.getString(RecrepRecordJobFields.NAME))
+                                                .put(RecrepEndpointMappingFields.STAGE, sourceMapping.getString(RecrepEndpointMappingFields.STAGE))
+                                                .put(RecrepEndpointMappingFields.HANDLER, sourceMapping.getString(RecrepEndpointMappingFields.HANDLER))
+                                                .put(RecrepEndpointMappingFields.SOURCE_IDENTIFIER, sourceMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER))
+                                                .put(RecrepEndpointMappingFields.PROPERTIES, endpointConfig.getJsonObject(RecrepEndpointMappingFields.PROPERTIES)));
 
-                    vertx.deployVerticle(sourceMapping.getString(RecrepEndpointMappingFields.HANDLER), deploymentOptions, deployementResult -> {
-                        RecrepJobRegistry.registerRecordStreamHandler(recordJob.getString(RecrepRecordJobFields.NAME), deployementResult.result());
-                    });
+                        log.debug("Create consumer for address " + sourceMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER));
+
+                        vertx.deployVerticle(sourceMapping.getString(RecrepEndpointMappingFields.HANDLER), deploymentOptions, deployementResult -> {
+                            if(deployementResult.failed()) {
+                                log.warn("Discarding Record Job. Failed to start endpoint handler.");
+                                eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_FINISHED, recordJob));
+                            } else {
+                                RecrepJobRegistry.registerRecordStreamHandler(recordJob.getString(RecrepRecordJobFields.NAME), deployementResult.result());
+                            }
+                        });
+                    } else {
+                        log.warn("Discarding Record Job. Failed to lookup endpoint configuration.");
+                        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_FINISHED, recordJob));
+                    }
 
                 }));
             });
@@ -89,43 +122,4 @@ public class Recorder extends AbstractVerticle {
             log.warn("Discarding Record Job. Start time is in the past.");
         }
     }
-
-//    private void startRecordJob(JsonObject event) {
-//
-//        JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
-//        final ArrayList<MessageConsumer<JsonObject>> dataStreamConsumer = new ArrayList<>();
-//        //final MessageConsumer<JsonObject>[] dataStreamConsumer = new MessageConsumer[recordJob.getJsonArray(RecrepRecordJobFields.SOURCES).size()];
-//
-//        long now = System.currentTimeMillis();
-//        long start = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_START) - now;
-//        long end = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_END) - now;
-//
-//        if(start >= 1 && end > start) {
-//
-//            vertx.setTimer(start, tick -> {
-//                eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_STARTED, recordJob));
-//                recordJob.getJsonArray(RecrepRecordJobFields.SOURCE_MAPPINGS).forEach((mapping -> {
-//                    JsonObject sourceMapping = (JsonObject) mapping;
-//                    String sourceIdentifier = sourceMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER);
-//                    log.debug("Create consumer for address " + sourceIdentifier);
-//                    dataStreamConsumer.add(vertx.eventBus().consumer(sourceIdentifier, message -> {
-//                        DeliveryOptions deliveryOptions = new DeliveryOptions();
-//                        deliveryOptions.addHeader("source", sourceIdentifier);
-//                        vertx.eventBus().send(recordJob.getString(RecrepRecordJobFields.NAME), message.body(), deliveryOptions);
-//                    }));
-//                }));
-//            });
-//
-//            try {
-//                vertx.setTimer(end, tick -> {
-//                    dataStreamConsumer.forEach(MessageConsumer::unregister);
-//                    eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_FINISHED, recordJob));
-//                });
-//            } catch (IllegalArgumentException x) {
-//                log.warn(x.getMessage());
-//            }
-//        } else {
-//            log.warn("Discarding Record Job. Start time is in the past.");
-//        }
-//    }
 }

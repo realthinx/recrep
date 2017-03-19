@@ -9,5 +9,6 @@ public class RecrepEndpointMappingFields {
     public static final String SOURCE_IDENTIFIER = "sourceIdentifier";
     public static final String TARGET_IDENTIFIER = "targetIdentifier";
     public static final String STAGE = "stage";
+    public static final String PROPERTIES = "properties";
 
 }

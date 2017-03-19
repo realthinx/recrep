@@ -1,6 +1,7 @@
 package de.iothings.recrep;
 
 import de.iothings.recrep.common.RecrepLogHelper;
+import de.iothings.recrep.state.RecrepState;
 import io.vertx.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,7 @@ public class RecrepEmbedded {
 
         this.orderedDeployables = new ArrayList<>(Arrays.asList(
                 RecrepDefaultLogger.class.getName(),
+                RecrepState.class.getName(),
                 RecrepEngine.class.getName(),
                 Replayer.class.getName(),
                 Recorder.class.getName(),

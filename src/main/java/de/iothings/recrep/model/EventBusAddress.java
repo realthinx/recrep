@@ -10,7 +10,8 @@ public enum EventBusAddress {
     REPLAYSTREAM,
     RECREP_LOGSTREAM,
     STATE_REQUEST,
-    STATE;
+    STATE,
+    CONFIGURATION_REQUEST;
 
 
 }

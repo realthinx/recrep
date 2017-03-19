@@ -45,7 +45,7 @@ public class JobConfigHelper {
                     try {
                         Files.newDirectoryStream(path, "*.{json}").forEach(pathList::add);
                     } catch (IOException e) {
-                        log.error("Failed to read job config file: " + path + ": " + e.getMessage());
+                        log.warn("Failed to find job config files in path " + path);
                     }
                     return pathList.stream();
                 })

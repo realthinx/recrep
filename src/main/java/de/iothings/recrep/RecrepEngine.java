@@ -7,7 +7,7 @@ import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
 import de.iothings.recrep.pubsub.EventSubscriber;
 import de.iothings.recrep.state.RecrepJobRegistry;
-import de.iothings.recrep.state.RecrepStore;
+import de.iothings.recrep.state.RecrepState;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
@@ -29,8 +29,6 @@ public class RecrepEngine extends AbstractVerticle {
     private RecrepLogHelper log;
     private RecordLogHelper recordLogHelper;
 
-    private RecrepStore recrepStore;
-
     private final Handler<JsonObject> startRecordStreamHandler = this::startRecordStream;
     private final Handler<JsonObject> saveRecordJobConfigHandler = this::saveJobConfig;
     private final Handler<JsonObject> endRecordStreamHandler = this::endRecordStream;
@@ -47,9 +45,7 @@ public class RecrepEngine extends AbstractVerticle {
         recordLogHelper = new RecordLogHelper(vertx);
         eventPublisher = new EventPublisher(vertx);
         eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
-        recrepStore = new RecrepStore(vertx);
         subscribeToReqrepEvents();
-        initializeConfiguration();
         log.info("Started " + this.getClass().getName());
     }
 
@@ -69,27 +65,6 @@ public class RecrepEngine extends AbstractVerticle {
         eventSubscriber.subscribe(configurationStreamHandler, RecrepEventType.CONFIGURATION_UPDATE);
     }
 
-    private void initializeConfiguration() {
-        ConfigStoreOptions fileStore = new ConfigStoreOptions()
-                .setType("file")
-                .setConfig(new JsonObject().put("path", "./recrep-config.json"));
-
-        ConfigRetrieverOptions options = new ConfigRetrieverOptions()
-                .addStore(fileStore);
-
-        ConfigRetriever retriever = ConfigRetriever.create(vertx, options);
-
-        retriever.getConfig(config -> {
-            eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.CONFIGURATION_UPDATE,
-                    config.result()));
-        });
-
-        retriever.listen(change -> {
-            eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.CONFIGURATION_UPDATE,
-                    change.getNewConfiguration()));
-        });
-
-    }
 
     private void handleConfigurationStream(JsonObject event) {
         JsonObject configuration = event.getJsonObject(RecrepEventFields.PAYLOAD);

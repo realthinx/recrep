@@ -22,7 +22,7 @@ public class TestRecordEndpoint extends AbstractVerticle {
         String eventBusAddress = config().getString(RecrepRecordJobFields.NAME);
         String stage = config().getString(RecrepEndpointMappingFields.STAGE);
         String sourceIdentifier = config().getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER);
-        Long interval = 1000l;
+        Long interval = config().getJsonObject(RecrepEndpointMappingFields.PROPERTIES).getLong("interval");
 
         System.out.println("Deployed Test Record Endpoint: " + this.getClass().getName() + " - " + config().toString());
 
