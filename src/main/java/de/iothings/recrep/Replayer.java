@@ -26,7 +26,6 @@ public class Replayer extends AbstractVerticle {
 
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;
-    private List<MessageConsumer> messageConsumerList = new ArrayList<>();
 
     private final Handler<JsonObject> startReplayJobHandler = event -> startReplayJob(event);
     private final Handler<Throwable> exceptionHandler = throwable -> log.error(throwable.getMessage());
@@ -43,12 +42,11 @@ public class Replayer extends AbstractVerticle {
 
     @Override
     public void stop() throws Exception {
-        messageConsumerList.forEach(MessageConsumer::unregister);
         log.info("Stopped " + this.getClass().getName());
     }
 
     private void subscribeToReqrepEvents() {
-        messageConsumerList.add(eventSubscriber.subscribe(startReplayJobHandler, RecrepEventType.REPLAYSTREAM_CREATED));
+        eventSubscriber.subscribe(startReplayJobHandler, RecrepEventType.REPLAYSTREAM_CREATED);
     }
 
     private void startReplayJob(JsonObject event) {

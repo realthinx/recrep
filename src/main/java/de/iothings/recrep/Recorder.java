@@ -21,7 +21,6 @@ public class Recorder extends AbstractVerticle {
     private RecrepLogHelper log;
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;
-    private List<MessageConsumer> messageConsumerList = new ArrayList<>();
     private JsonObject recrepConfiguration;
 
     private Handler<JsonObject> startRecordJobHandler = event -> startRecordJob(event);
@@ -32,7 +31,6 @@ public class Recorder extends AbstractVerticle {
         log = new RecrepLogHelper(vertx, Recorder.class.getName());
         eventPublisher = new EventPublisher(vertx);
         eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
-        messageConsumerList.add(eventSubscriber.subscribe(startRecordJobHandler, RecrepEventType.RECORDSTREAM_CREATED));
         subscribeToReqrepEvents();
         initializeConfiguration();
         log.info("Started " + this.getClass().getName());
@@ -41,7 +39,6 @@ public class Recorder extends AbstractVerticle {
 
     @Override
     public void stop() throws Exception {
-        messageConsumerList.forEach(MessageConsumer::unregister);
         log.info("Stopped " + this.getClass().getName());
     }
 
@@ -52,6 +49,7 @@ public class Recorder extends AbstractVerticle {
     }
 
     private void subscribeToReqrepEvents() {
+        eventSubscriber.subscribe(startRecordJobHandler, RecrepEventType.RECORDSTREAM_CREATED);
         eventSubscriber.subscribe(configurationUpdateHandler, RecrepEventType.CONFIGURATION_UPDATE);
     }
 

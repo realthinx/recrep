@@ -42,10 +42,10 @@ public class BasicRecordReplayTest {
     public void before(TestContext context) {
         Async async = context.async();
 
-        stage = "TEST";
+        stage = "DEV";
         testDataStreamAdress1 = "testdata_in_1";
         testDataStreamAdress2 = "testdata_in_2";
-        testTargetStreamAdress = "testdata_replay";
+        testTargetStreamAdress = "testdata_replay_1";
         testRecordJobName = "recording_job_" + UUID.randomUUID().toString();
         testRecordJobFilePath = "./.temp";
 
@@ -112,13 +112,13 @@ public class BasicRecordReplayTest {
                 builder1
                         .withSourceIdentifier(testDataStreamAdress1)
                         .withHandler(TestRecordEndpoint.class.getName())
-                        .withStage("DEV")
+                        .withStage(stage)
                         .build());
         sources.add(
                 builder2
                         .withSourceIdentifier(testDataStreamAdress2)
                         .withHandler(TestRecordEndpoint.class.getName())
-                        .withStage("DEV")
+                        .withStage(stage)
                         .build());
 
         JsonObject recordJob = new JsonObject();
@@ -137,7 +137,7 @@ public class BasicRecordReplayTest {
             JsonObject sourceMapping = (JsonObject) source;
             RecrepEndpointMappingBuilder builder1 = new RecrepEndpointMappingBuilder();
             JsonObject targetMapping1 = builder1
-                    .withStage(sourceMapping.getString(RecrepEndpointMappingFields.STAGE))
+                    .withStage(stage)
                     .withSourceIdentifier(sourceMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER))
                     .withTargetIdentifier(testTargetStreamAdress)
                     .withHandler(TestReplayEndpoint.class.getName())

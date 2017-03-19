@@ -1,5 +1,6 @@
 package de.iothings.recrep.state;
 
+import de.iothings.recrep.common.JobConfigHelper;
 import de.iothings.recrep.common.RecrepLogHelper;
 import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
@@ -10,10 +11,12 @@ import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 /**
  * Created by ue60219 on 21.02.2017.
@@ -26,6 +29,7 @@ public class RecrepState extends AbstractVerticle {
 
     // PubSub Handler
     private final Handler<JsonObject> recrepJobInventoryUpdateHandler = this::handleJobInventoryUpdate;
+    private final Handler<JsonObject> configurationStreamHandler = this::handleConfigurationStream;
 
     // Command Message Handler
     private final Handler<Message<JsonObject>> recrepStateRequestHandler = this::handleStateRequest;
@@ -74,12 +78,13 @@ public class RecrepState extends AbstractVerticle {
     }
 
     private void listenForRecrepCommands() {
-        this.vertx.eventBus().consumer(EventBusAddress.STATE_REQUEST.toString(), recrepStateRequestHandler);
-        this.vertx.eventBus().consumer(EventBusAddress.CONFIGURATION_REQUEST.toString(), recrepConfigurationRequestHandler);
+        vertx.eventBus().consumer(EventBusAddress.STATE_REQUEST.toString(), recrepStateRequestHandler);
+        vertx.eventBus().consumer(EventBusAddress.CONFIGURATION_REQUEST.toString(), recrepConfigurationRequestHandler);
     }
 
     private void subscribeToReqrepEvents() {
-        this.eventSubscriber.subscribe(recrepJobInventoryUpdateHandler, RecrepEventType.RECORDJOB_INVENTORY);
+        eventSubscriber.subscribe(recrepJobInventoryUpdateHandler, RecrepEventType.RECORDJOB_INVENTORY);
+        eventSubscriber.subscribe(configurationStreamHandler, RecrepEventType.CONFIGURATION_UPDATE);
     }
 
     private void handleJobInventoryUpdate(JsonObject update) {
@@ -88,6 +93,14 @@ public class RecrepState extends AbstractVerticle {
             recordJobs.put(((JsonObject) recordJob).getString(RecrepRecordJobFields.NAME), (JsonObject) recordJob);
         } );
         log.info("State after state update: " + createStateSnapshot());
+    }
+
+    private void handleConfigurationStream(JsonObject event) {
+        JsonObject configuration = event.getJsonObject(RecrepEventFields.PAYLOAD);
+        ArrayList<String> diretories = new ArrayList<>(configuration.getJsonObject(RecrepConfigurationFields.INVENTORY)
+                .getJsonArray(RecrepConfigurationFields.INVENTORY_DIRECTORIES).getList());
+        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_INVENTORY,
+                new JsonObject().put("recordJobs", new JsonArray(JobConfigHelper.getJobConfigStream(diretories).collect(Collectors.toList())))));
     }
 
 
