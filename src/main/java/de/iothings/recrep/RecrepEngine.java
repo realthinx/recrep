@@ -7,6 +7,7 @@ import de.iothings.recrep.common.RecrepLogHelper;
 import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
 import de.iothings.recrep.pubsub.EventSubscriber;
+import de.iothings.recrep.pubsub.MetricPublisher;
 import de.iothings.recrep.state.RecrepJobRegistry;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
@@ -18,6 +19,7 @@ import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class RecrepEngine extends AbstractVerticle {
 
@@ -74,9 +76,11 @@ public class RecrepEngine extends AbstractVerticle {
 
         JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
         Logger recordLog = recordLogHelper.createAndGetRecordLogger(recordJob);
+        MetricPublisher metricPublisher = new MetricPublisher(vertx, recordJob.getString(RecrepRecordJobFields.NAME));
 
         MessageConsumer<JsonObject> recordStream = vertx.eventBus().consumer(recordJob.getString(RecrepRecordJobFields.NAME), message -> {
             recordLog.info(message.headers().get("source") + "|" + encodeObject(message.body()));
+            metricPublisher.publishMessageCount(message.headers().get("source"));
         });
 
         try {
@@ -100,6 +104,8 @@ public class RecrepEngine extends AbstractVerticle {
     private void startReplayStream(JsonObject event) {
 
         JsonObject replayJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
+        MetricPublisher metricPublisher = new MetricPublisher(vertx, replayJob.getString(RecrepReplayJobFields.NAME));
+
 
         HashMap<String, MessageProducer<JsonObject>> messageProducers = new HashMap<>();
         replayJob.getJsonArray(RecrepReplayJobFields.TARGET_MAPPINGS).forEach(mapping -> {
@@ -146,6 +152,7 @@ public class RecrepEngine extends AbstractVerticle {
             MessageProducer producer = messageProducers.get(source);
             if(producer != null) {
                 producer.send(decodeObject(recordLine.getString(RecrepRecordMessageFields.PAYLOAD)));
+                metricPublisher.publishMessageCount(source);
             }
         });
 

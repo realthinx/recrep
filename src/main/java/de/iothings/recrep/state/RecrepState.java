@@ -11,12 +11,10 @@ import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.stream.Collectors;
 
 /**
  * Created by ue60219 on 21.02.2017.
@@ -28,8 +26,9 @@ public class RecrepState extends AbstractVerticle {
     private EventSubscriber eventSubscriber;
 
     // PubSub Handler
-    private final Handler<JsonObject> recrepJobInventoryUpdateHandler = this::handleJobInventoryUpdate;
     private final Handler<JsonObject> configurationStreamHandler = this::handleConfigurationStream;
+    private final Handler<JsonObject> recordJobUpdateHandler = this::handleRecordJobEvent;
+    private final Handler<JsonObject> replayJobUpdateHandler = this::handleReplayJobEvent;
 
     // Command Message Handler
     private final Handler<Message<JsonObject>> recrepStateRequestHandler = this::handleStateRequest;
@@ -37,12 +36,13 @@ public class RecrepState extends AbstractVerticle {
 
     private ConfigRetriever configRetriever;
 
+    // Job Inventory Maps
     private HashMap<String, JsonObject> recordJobs = new HashMap<>();
     private HashMap<String, JsonObject> scheduledRecordJobs = new HashMap<>();
-    private HashMap<String, JsonObject> runningRecordJobs = new HashMap<>();
+    private HashMap<String, JsonObject> activeRecordJobs = new HashMap<>();
 
     private HashMap<String, JsonObject> scheduledReplayJobs = new HashMap<>();
-    private HashMap<String, JsonObject> runningReplayJobs = new HashMap<>();
+    private HashMap<String, JsonObject> activeReplayJobs = new HashMap<>();
 
     @Override
     public void start() throws Exception {
@@ -83,30 +83,100 @@ public class RecrepState extends AbstractVerticle {
     }
 
     private void subscribeToReqrepEvents() {
-        eventSubscriber.subscribe(recrepJobInventoryUpdateHandler, RecrepEventType.RECORDJOB_INVENTORY);
         eventSubscriber.subscribe(configurationStreamHandler, RecrepEventType.CONFIGURATION_UPDATE);
-    }
-
-    private void handleJobInventoryUpdate(JsonObject update) {
-        log.info("Received state update: " + update.toString());
-        update.getJsonObject(RecrepEventFields.PAYLOAD).getJsonArray("recordJobs").forEach(recordJob -> {
-            recordJobs.put(((JsonObject) recordJob).getString(RecrepRecordJobFields.NAME), (JsonObject) recordJob);
-        } );
-        log.info("State after state update: " + createStateSnapshot());
+        eventSubscriber.subscribe(recordJobUpdateHandler, RecrepEventType.RECORDJOB_REQUEST,
+                RecrepEventType.RECORDJOB_STARTED, RecrepEventType.RECORDJOB_FINISHED, RecrepEventType.RECORDJOB_CANCEL_REQUEST);
+        eventSubscriber.subscribe(replayJobUpdateHandler, RecrepEventType.REPLAYJOB_REQUEST,
+                RecrepEventType.REPLAYJOB_STARTED, RecrepEventType.REPLAYJOB_FINISHED, RecrepEventType.REPLAYJOB_CANCEL_REQUEST);
     }
 
     private void handleConfigurationStream(JsonObject event) {
         JsonObject configuration = event.getJsonObject(RecrepEventFields.PAYLOAD);
         ArrayList<String> diretories = new ArrayList<>(configuration.getJsonObject(RecrepConfigurationFields.INVENTORY)
                 .getJsonArray(RecrepConfigurationFields.INVENTORY_DIRECTORIES).getList());
-        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_INVENTORY,
-                new JsonObject().put("recordJobs", new JsonArray(JobConfigHelper.getJobConfigStream(diretories).collect(Collectors.toList())))));
+
+        JobConfigHelper.getJobConfigStream(diretories).forEach(recordJob -> {
+            recordJobs.put(recordJob.getString(RecrepRecordJobFields.NAME), recordJob);
+        });
+
+        publishStateSnapshot();
+    }
+
+
+    // specific job handler
+
+    private void handleRecordJobEvent(JsonObject event) {
+
+         JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
+
+         switch (RecrepEventType.valueOf(event.getString(RecrepEventFields.TYPE))) {
+
+             case RECORDJOB_REQUEST:
+                 //add to scheduled record jobs
+                 scheduledRecordJobs.put(recordJob.getString(RecrepRecordJobFields.NAME), recordJob);
+                 publishStateSnapshot();
+                 break;
+             case RECORDJOB_STARTED:
+                 //remove from scheduled record jobs and add to running jobs
+                 scheduledRecordJobs.remove(recordJob.getString(RecrepRecordJobFields.NAME));
+                 activeRecordJobs.put(recordJob.getString(RecrepRecordJobFields.NAME), recordJob);
+                 publishStateSnapshot();
+                 break;
+             case RECORDJOB_FINISHED:
+                 //remove from running record jobs and add to job inventory
+                 activeRecordJobs.remove(recordJob.getString(RecrepRecordJobFields.NAME));
+                 recordJobs.put(recordJob.getString(RecrepRecordJobFields.NAME), recordJob);
+                 publishStateSnapshot();
+                 break;
+             case RECORDJOB_CANCEL_REQUEST:
+                 //remove from running record jobs and add to job inventory
+                 scheduledRecordJobs.remove(recordJob.getString(RecrepRecordJobFields.NAME));
+                 activeRecordJobs.remove(recordJob.getString(RecrepRecordJobFields.NAME));
+                 recordJobs.put(recordJob.getString(RecrepRecordJobFields.NAME), recordJob);
+                 publishStateSnapshot();
+                 break;
+             default:
+                 //do nothing
+         }
+
+    }
+
+    private void handleReplayJobEvent(JsonObject event) {
+
+        JsonObject replayJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
+
+        switch (RecrepEventType.valueOf(event.getString(RecrepEventFields.TYPE))) {
+            case REPLAYJOB_REQUEST:
+                //add to scheduled record jobs
+                scheduledReplayJobs.put(replayJob.getString(RecrepRecordJobFields.NAME), replayJob);
+                publishStateSnapshot();
+                break;
+            case REPLAYJOB_STARTED:
+                //remove from scheduled record jobs and add to running jobs
+                scheduledReplayJobs.remove(replayJob.getString(RecrepRecordJobFields.NAME));
+                activeReplayJobs.put(replayJob.getString(RecrepRecordJobFields.NAME), replayJob);
+                publishStateSnapshot();
+                break;
+            case REPLAYJOB_FINISHED:
+                //remove from running record jobs and add to job inventory
+                activeReplayJobs.remove(replayJob.getString(RecrepRecordJobFields.NAME));
+                publishStateSnapshot();
+                break;
+            case REPLAYJOB_CANCEL_REQUEST:
+                //remove from running record jobs and add to job inventory
+                scheduledReplayJobs.remove(replayJob.getString(RecrepRecordJobFields.NAME));
+                activeReplayJobs.remove(replayJob.getString(RecrepRecordJobFields.NAME));
+                publishStateSnapshot();
+                break;
+            default:
+                //do nothing
+        }
     }
 
 
     // Command Handler
     private void handleStateRequest(Message stateRequest) {
-        stateRequest.reply(createStateSnapshot());
+        stateRequest.reply(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_INVENTORY, createStateSnapshot()));
     }
 
     private void handleConfigurationRequest(Message stateRequest) {
@@ -115,13 +185,19 @@ public class RecrepState extends AbstractVerticle {
         });
     }
 
+    private void publishStateSnapshot() {
+        if(eventPublisher != null) {
+            eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_INVENTORY, createStateSnapshot()));
+        }
+    }
+
     private JsonObject createStateSnapshot() {
         return new JsonObject()
             .put("recordJobs", new ArrayList<>(recordJobs.values()))
             .put("scheduledRecordJobs",new ArrayList<>(scheduledRecordJobs.values()))
-            .put("runningRecordJobs", new ArrayList<>(runningRecordJobs.values()))
+            .put("activeRecordJobs", new ArrayList<>(activeRecordJobs.values()))
             .put("scheduledReplayJobs", new ArrayList<>(scheduledReplayJobs.values()))
-            .put("runningReplayJobs", new ArrayList<>(runningReplayJobs.values()))
+            .put("activeReplayJobs", new ArrayList<>(activeReplayJobs.values()))
             .put("recrepConfiguration", configRetriever.getCachedConfig());
     }
 

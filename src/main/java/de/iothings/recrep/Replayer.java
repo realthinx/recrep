@@ -58,7 +58,8 @@ public class Replayer extends AbstractVerticle {
             RecordReadStream<String> recordStream = new RecordReadStream<>(recordFileLines);
             recordStream.exceptionHandler(exceptionHandler);
 
-            TimelineWriteStream timelineStream = new TimelineWriteStream(vertx, replayJob.getString(RecrepReplayJobFields.NAME), 1000, replayJob.getInteger(RecrepReplayJobFields.SPEEDFACTOR));
+            TimelineWriteStream timelineStream = new TimelineWriteStream(vertx, replayJob.getString(RecrepReplayJobFields.NAME), 1000,
+                    replayJob.getInteger(RecrepReplayJobFields.SPEEDFACTOR));
             timelineStream.exceptionHandler(exceptionHandler);
             timelineStream.endHandler( end -> eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYJOB_FINISHED, replayJob)));
 

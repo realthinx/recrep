@@ -12,7 +12,7 @@
       "sourceIdentifier": "testdata_in_1",
       "sourceIdentifierLabel": "Dummy Record Resource 1",
       "properties": {
-        "interval": 1200
+        "interval": 1000
       }
     },
     {
