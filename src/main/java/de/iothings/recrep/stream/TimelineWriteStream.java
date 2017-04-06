@@ -117,7 +117,11 @@ public class TimelineWriteStream implements WriteStream<String> {
         String[] recordLineChunks = recordLine.split("\\|");
         jsonObject.put(RecrepRecordMessageFields.TIMESTAMP, Long.valueOf(recordLineChunks[0]));
         jsonObject.put(RecrepRecordMessageFields.SOURCE, recordLineChunks[1]);
-        jsonObject.put(RecrepRecordMessageFields.PAYLOAD, recordLineChunks[2]);
+        StringBuilder concat = new StringBuilder();
+        for(int i = 2; i < recordLineChunks.length; i++) {
+            concat.append(recordLineChunks[i]);
+        }
+        jsonObject.put(RecrepRecordMessageFields.PAYLOAD, concat.toString());
         return jsonObject;
     }
 
