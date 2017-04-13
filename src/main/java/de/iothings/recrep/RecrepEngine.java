@@ -152,13 +152,14 @@ public class RecrepEngine extends AbstractVerticle {
             MessageProducer producer = messageProducers.get(source);
             if(producer != null) {
                 producer.send(decodeObject(recordLine.getString(RecrepRecordMessageFields.PAYLOAD)));
-                metricPublisher.publishMessageCount(source);
             }
         });
 
         try {
             RecrepJobRegistry.registerReplayStreamConsumer(replayJob.getString(RecrepReplayJobFields.NAME),replayStream);
-            eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYSTREAM_CREATED, replayJob));
+            // trigger endpoint ready states via event and collect
+            vertx.setTimer(1500l, endpointReady ->
+                    eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYSTREAM_CREATED, replayJob)));
         } catch (Exception x) {
             log.error("Failed to register message consumer for replay stream: " + x.getMessage());
             replayStream.unregister();
