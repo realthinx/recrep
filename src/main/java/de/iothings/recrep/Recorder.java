@@ -14,6 +14,7 @@ import io.vertx.core.json.JsonObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 
 public class Recorder extends AbstractVerticle {
@@ -65,6 +66,9 @@ public class Recorder extends AbstractVerticle {
         long now = System.currentTimeMillis();
         long start = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_START) - now;
         long end = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_END) - now;
+
+        vertx.eventBus().consumer(RecrepSignalType.METRICS + "-" + recordJob.getString(RecrepRecordJobFields.NAME),
+                metricMessage -> appendMetric(recordJob, (JsonObject) metricMessage.body()));
 
         if(start >= 1 && end > start) {
 
@@ -119,5 +123,18 @@ public class Recorder extends AbstractVerticle {
         } else {
             log.warn("Discarding Record Job. Start time is in the past.");
         }
+    }
+
+    private void appendMetric(JsonObject recordJob, JsonObject metric) {
+        // log.info(metric.toString());
+        recordJob.getJsonArray(RecrepRecordJobFields.SOURCE_MAPPINGS)
+                .stream()
+                .map( mapping -> (JsonObject) mapping )
+                .filter( mapping -> mapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER)
+                        .equals(metric.getString(RecrepEndpointMetricFields.ENDPOINT_IDENTIFIER)))
+                .findFirst()
+                .ifPresent( mapping -> {
+                    mapping.put(RecrepEndpointMappingFields.METRICS, metric.getJsonObject(RecrepEndpointMetricFields.METRICS));
+                } );
     }
 }

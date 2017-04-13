@@ -5,6 +5,9 @@ package de.iothings.recrep.model;
  */
 public class RecrepEndpointMetricFields {
 
+    public static final String ENDPOINT_IDENTIFIER = "endpointIdentifier";
+    public static final String METRICS = "metrics";
+
     public static final String MESSAGE_COUNT = "messageCount";
     public static final String MESSAGE_AVERAGE_RATE_SECOND = "messageRateSecond";
     public static final String MESSAGE_AVERAGE_SIZE_BYTES = "messageAverageSizeBytes";

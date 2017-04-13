@@ -6,5 +6,7 @@ package de.iothings.recrep.model;
 public class RecrepSignalType {
 
     public static String REPLAYENDPOINT_READY = "REPLAYENDPOINT_READY";
+    public static String METRICS = "METRICS";
+
 
 }

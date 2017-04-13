@@ -6,6 +6,7 @@ import com.codahale.metrics.MetricRegistry;
 import de.iothings.recrep.common.RecrepLogHelper;
 import de.iothings.recrep.model.EventBusAddress;
 import de.iothings.recrep.model.RecrepEndpointMetricFields;
+import de.iothings.recrep.model.RecrepSignalType;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
@@ -22,7 +23,7 @@ public class MetricPublisher {
 
     private RecrepLogHelper log;
     private Vertx vertx;
-    private String METRIC_ADRESS_PREFIX = "METRICS-";
+    private String METRIC_ADRESS_PREFIX = RecrepSignalType.METRICS + "-";
     private String eventBusAddress;
     private long timestampStart;
     private HashMap<String, Counter> messageCounters;
