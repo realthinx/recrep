@@ -12,13 +12,19 @@ import de.iothings.recrep.state.RecrepJobRegistry;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.eventbus.MessageProducer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.rx.java.ObservableHandler;
+import io.vertx.rx.java.RxHelper;
 import org.slf4j.Logger;
+import rx.Observable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class RecrepEngine extends AbstractVerticle {
@@ -106,7 +112,7 @@ public class RecrepEngine extends AbstractVerticle {
         JsonObject replayJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
         MetricPublisher metricPublisher = new MetricPublisher(vertx, replayJob.getString(RecrepReplayJobFields.NAME));
 
-
+        ArrayList<ObservableHandler<Message<String>>> endpointReadyTriggers = new ArrayList<>();
         HashMap<String, MessageProducer<JsonObject>> messageProducers = new HashMap<>();
         replayJob.getJsonArray(RecrepReplayJobFields.TARGET_MAPPINGS).forEach(mapping -> {
             JsonObject targetMapping = (JsonObject) mapping;
@@ -117,6 +123,7 @@ public class RecrepEngine extends AbstractVerticle {
                     targetMapping.getString(RecrepEndpointMappingFields.TARGET_IDENTIFIER));
 
             if(endpointConfig != null) {
+
                 DeploymentOptions deploymentOptions = new DeploymentOptions()
                         .setConfig(
                                 new JsonObject()
@@ -127,6 +134,12 @@ public class RecrepEngine extends AbstractVerticle {
                                         .put(RecrepEndpointMappingFields.TARGET_IDENTIFIER, targetMapping.getString(RecrepEndpointMappingFields.TARGET_IDENTIFIER))
                                         .put(RecrepEndpointMappingFields.PROPERTIES, endpointConfig.getJsonObject(RecrepEndpointMappingFields.PROPERTIES)));
 
+                ObservableHandler<Message<String>> endpointReadyHandler = RxHelper.observableHandler();
+                endpointReadyTriggers.add(endpointReadyHandler);
+                String eventBusAddress = replayJob.getString(RecrepReplayJobFields.NAME) + "_"
+                        + targetMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER);
+                vertx.eventBus().consumer(eventBusAddress + "_" + RecrepSignalType.REPLAYENDPOINT_READY, endpointReadyHandler.toHandler());
+
                 vertx.deployVerticle(targetMapping.getString(RecrepEndpointMappingFields.HANDLER), deploymentOptions, deployementResult -> {
                     if(deployementResult.failed()) {
                         log.warn("Discarding Replay Job. Failed to start endpoint handler.");
@@ -134,9 +147,7 @@ public class RecrepEngine extends AbstractVerticle {
                     } else {
                         RecrepJobRegistry.registerReplayStreamHandler(replayJob.getString(RecrepReplayJobFields.NAME), deployementResult.result());
                         messageProducers.put(targetMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER),
-                                vertx.eventBus().sender(
-                                        replayJob.getString(RecrepReplayJobFields.NAME) + "_"
-                                                + targetMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER)));
+                                vertx.eventBus().sender(eventBusAddress));
                     }
                 });
             } else {
@@ -152,16 +163,25 @@ public class RecrepEngine extends AbstractVerticle {
             MessageProducer producer = messageProducers.get(source);
             if(producer != null) {
                 producer.send(decodeObject(recordLine.getString(RecrepRecordMessageFields.PAYLOAD)));
+                metricPublisher.publishMessageCount(source);
             }
         });
 
         try {
             RecrepJobRegistry.registerReplayStreamConsumer(replayJob.getString(RecrepReplayJobFields.NAME),replayStream);
-            // trigger endpoint ready states via event and collect
-            vertx.setTimer(1500l, endpointReady ->
-                    eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYSTREAM_CREATED, replayJob)));
+            // Observe endpoint ready signals and emit when all endpoints are ready
+            Observable.merge(endpointReadyTriggers.toArray(new ObservableHandler[endpointReadyTriggers.size()]))
+                    .buffer(endpointReadyTriggers.size())
+                    .timeout(10, TimeUnit.SECONDS)
+                    .subscribe( allReady -> {
+                        log.debug("All endpoints ready for Job: " + replayJob);
+                        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYSTREAM_CREATED, replayJob));
+                    }, error -> {
+                        log.warn("Timeout waiting for endpoints to be ready for Job: " + replayJob);
+                        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.REPLAYJOB_FINISHED, replayJob));
+                    });
         } catch (Exception x) {
-            log.error("Failed to register message consumer for replay stream: " + x.getMessage());
+            log.error("Failed to register replay stream: " + x.getMessage());
             replayStream.unregister();
         }
 

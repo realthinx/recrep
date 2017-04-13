@@ -12,6 +12,4 @@ public enum EventBusAddress {
     STATE_REQUEST,
     STATE,
     CONFIGURATION_REQUEST;
-
-
 }

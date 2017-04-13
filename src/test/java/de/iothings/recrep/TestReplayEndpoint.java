@@ -2,6 +2,7 @@ package de.iothings.recrep;
 
 import de.iothings.recrep.model.RecrepEndpointMappingFields;
 import de.iothings.recrep.model.RecrepReplayJobFields;
+import de.iothings.recrep.model.RecrepSignalType;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.Message;
 
@@ -17,6 +18,9 @@ public class TestReplayEndpoint extends AbstractVerticle {
 
         String eventBusAddress = config().getString(RecrepReplayJobFields.NAME) + "_" + config().getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER);
         vertx.eventBus().consumer(eventBusAddress).handler(this::handleMessage);
+
+        //Publish Replay Endpoint Ready
+        vertx.eventBus().publish(eventBusAddress + "_" + RecrepSignalType.REPLAYENDPOINT_READY,"");
     }
 
     @Override

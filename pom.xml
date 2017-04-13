@@ -35,6 +35,13 @@
           <version>${version.vertx}</version>
         </dependency>
 
+        <!-- vert.x rx -->
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-rx-java</artifactId>
+            <version>${version.vertx}</version>
+        </dependency>
+
         <!-- vert.x web -->
         <dependency>
             <groupId>io.vertx</groupId>
