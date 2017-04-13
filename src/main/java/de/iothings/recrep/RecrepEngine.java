@@ -64,6 +64,7 @@ public class RecrepEngine extends AbstractVerticle {
         eventSubscriber.subscribe(startRecordStreamHandler, RecrepEventType.RECORDJOB_REQUEST);
         eventSubscriber.subscribe(saveRecordJobConfigHandler, RecrepEventType.RECORDJOB_REQUEST);
         eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED);
+        eventSubscriber.subscribe(saveRecordJobConfigHandler, RecrepEventType.RECORDJOB_FINISHED);
         eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_CANCEL_REQUEST);
         eventSubscriber.subscribe(startReplayStreamHandler, RecrepEventType.REPLAYJOB_REQUEST);
         eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED);
@@ -85,8 +86,10 @@ public class RecrepEngine extends AbstractVerticle {
         MetricPublisher metricPublisher = new MetricPublisher(vertx, recordJob.getString(RecrepRecordJobFields.NAME));
 
         MessageConsumer<JsonObject> recordStream = vertx.eventBus().consumer(recordJob.getString(RecrepRecordJobFields.NAME), message -> {
-            recordLog.info(message.headers().get("source") + "|" + encodeObject(message.body()));
-            metricPublisher.publishMessageCount(message.headers().get("source"));
+            String payload = encodeObject(message.body());
+            recordLog.info(message.headers().get("source") + "|" + payload);
+            // metricPublisher.publishMessageCount(message.headers().get("source"));
+            metricPublisher.publishMessageMetrics(message.headers().get("source"), payload.getBytes().length);
         });
 
         try {
@@ -162,8 +165,9 @@ public class RecrepEngine extends AbstractVerticle {
             String source = recordLine.getString(RecrepRecordMessageFields.SOURCE);
             MessageProducer producer = messageProducers.get(source);
             if(producer != null) {
-                producer.send(decodeObject(recordLine.getString(RecrepRecordMessageFields.PAYLOAD)));
-                metricPublisher.publishMessageCount(source);
+                JsonObject payload = decodeObject(recordLine.getString(RecrepRecordMessageFields.PAYLOAD));
+                producer.send(payload);
+                metricPublisher.publishMessageMetrics(source, payload.toString().getBytes().length);
             }
         });
 

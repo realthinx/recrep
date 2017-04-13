@@ -19,6 +19,7 @@
 
     <properties>
         <version.vertx>3.4.1</version.vertx>
+        <version.metrics>3.2.2</version.metrics>
         <version.log4j>2.7</version.log4j>
         <version.junit>4.12</version.junit>
         <version.commons.io>2.5</version.commons.io>
@@ -54,6 +55,13 @@
             <groupId>io.vertx</groupId>
             <artifactId>vertx-config</artifactId>
             <version>${version.vertx}</version>
+        </dependency>
+
+        <!-- dropwizard metrics -->
+        <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-core</artifactId>
+            <version>${version.metrics}</version>
         </dependency>
 
         <!-- log4j2 logging -->
