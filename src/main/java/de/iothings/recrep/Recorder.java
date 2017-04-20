@@ -91,6 +91,13 @@ public class Recorder extends AbstractVerticle {
                                                 .put(RecrepEndpointMappingFields.HANDLER, sourceMapping.getString(RecrepEndpointMappingFields.HANDLER))
                                                 .put(RecrepEndpointMappingFields.SOURCE_IDENTIFIER, sourceMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER))
                                                 .put(RecrepEndpointMappingFields.PROPERTIES, endpointConfig.getJsonObject(RecrepEndpointMappingFields.PROPERTIES)));
+                        // todo: not nice
+                        if(sourceMapping.getJsonObject(RecrepEndpointMappingFields.PROPERTIES) != null) {
+                            sourceMapping.getJsonObject(RecrepEndpointMappingFields.PROPERTIES).forEach(propertyEntry -> {
+                                deploymentOptions.getConfig().getJsonObject(RecrepEndpointMappingFields.PROPERTIES)
+                                        .put(propertyEntry.getKey(), propertyEntry.getValue());
+                            });
+                        }
 
                         log.debug("Create consumer for address " + sourceMapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER));
 
