@@ -24,8 +24,12 @@ public class Recorder extends AbstractVerticle {
     private EventSubscriber eventSubscriber;
     private JsonObject recrepConfiguration;
 
+    private JsonObject recordJob;
+    private long timerId;
+
     private Handler<JsonObject> startRecordJobHandler = event -> startRecordJob(event);
     private Handler<JsonObject> configurationUpdateHandler = this::handleConfigurationUpdate;
+    private Handler<JsonObject> cancelRecordJobHandler = this::cancelRecordJobHandler;
 
     @Override
     public void start() throws Exception {
@@ -36,7 +40,6 @@ public class Recorder extends AbstractVerticle {
         initializeConfiguration();
         log.info("Started " + this.getClass().getName());
     }
-
 
     @Override
     public void stop() throws Exception {
@@ -52,6 +55,7 @@ public class Recorder extends AbstractVerticle {
     private void subscribeToReqrepEvents() {
         eventSubscriber.subscribe(startRecordJobHandler, RecrepEventType.RECORDSTREAM_CREATED);
         eventSubscriber.subscribe(configurationUpdateHandler, RecrepEventType.CONFIGURATION_UPDATE);
+        eventSubscriber.subscribe(cancelRecordJobHandler, RecrepEventType.RECORDJOB_CANCEL_REQUEST);
     }
 
     private void handleConfigurationUpdate(JsonObject event) {
@@ -60,17 +64,18 @@ public class Recorder extends AbstractVerticle {
 
     private void startRecordJob(JsonObject event) {
 
-        JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
+        recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
         final ArrayList<MessageConsumer<JsonObject>> dataStreamConsumer = new ArrayList<>();
 
         long now = System.currentTimeMillis();
         long start = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_START) - now;
-        long end = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_END) - now;
+        Long optionalEnd = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_END);
+        long end = optionalEnd != null ? optionalEnd - now : start;
 
         vertx.eventBus().consumer(RecrepSignalType.METRICS + "-" + recordJob.getString(RecrepRecordJobFields.NAME),
                 metricMessage -> appendMetric(recordJob, (JsonObject) metricMessage.body()));
 
-        if(start >= 1 && end > start) {
+        if(start >= 1 && end >= start) {
 
             vertx.setTimer(start, tick -> {
                 eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_STARTED, recordJob));
@@ -118,12 +123,14 @@ public class Recorder extends AbstractVerticle {
             });
 
             try {
-                vertx.setTimer(end, tick -> {
-                    RecrepJobRegistry.unregisterRecordStreamHandler(recordJob.getString(RecrepRecordJobFields.NAME)).forEach(deploymentID -> {
-                        vertx.undeploy(deploymentID);
+                if (end > start) {
+                    timerId = vertx.setTimer(end, tick -> {
+                        RecrepJobRegistry.unregisterRecordStreamHandler(recordJob.getString(RecrepRecordJobFields.NAME)).forEach(deploymentID -> {
+                            vertx.undeploy(deploymentID);
+                        });
+                        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_FINISHED, recordJob));
                     });
-                    eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_FINISHED, recordJob));
-                });
+                }
             } catch (IllegalArgumentException x) {
                 log.warn(x.getMessage());
             }
@@ -132,8 +139,20 @@ public class Recorder extends AbstractVerticle {
         }
     }
 
+    private void cancelRecordJobHandler(JsonObject event) {
+        vertx.cancelTimer(timerId);
+
+        RecrepJobRegistry.unregisterRecordStreamHandler(recordJob.getString(RecrepRecordJobFields.NAME)).forEach(deploymentID -> {
+            vertx.undeploy(deploymentID);
+        });
+
+        long now = System.currentTimeMillis();
+        recordJob.put(RecrepRecordJobFields.TIMESTAMP_END, now);
+
+        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_FINISHED, recordJob));
+    }
+
     private void appendMetric(JsonObject recordJob, JsonObject metric) {
-        // log.info(metric.toString());
         recordJob.getJsonArray(RecrepRecordJobFields.SOURCE_MAPPINGS)
                 .stream()
                 .map( mapping -> (JsonObject) mapping )

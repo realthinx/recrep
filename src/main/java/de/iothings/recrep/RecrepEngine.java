@@ -65,7 +65,7 @@ public class RecrepEngine extends AbstractVerticle {
         eventSubscriber.subscribe(saveRecordJobConfigHandler, RecrepEventType.RECORDJOB_REQUEST);
         eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED);
         eventSubscriber.subscribe(saveRecordJobConfigHandler, RecrepEventType.RECORDJOB_FINISHED);
-        eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_CANCEL_REQUEST);
+        //eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_CANCEL_REQUEST);
         eventSubscriber.subscribe(startReplayStreamHandler, RecrepEventType.REPLAYJOB_REQUEST);
         eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED);
         eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_CANCEL_REQUEST);
@@ -188,14 +188,12 @@ public class RecrepEngine extends AbstractVerticle {
             log.error("Failed to register replay stream: " + x.getMessage());
             replayStream.unregister();
         }
-
     }
 
     private void saveJobConfig(JsonObject event) {
         JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
         JobConfigHelper.saveJobConfig(recordJob);
     }
-
 
     private void endReplayStream(JsonObject event) {
         JsonObject replayJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
