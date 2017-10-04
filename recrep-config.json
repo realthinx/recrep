@@ -1,4 +1,5 @@
 {
+  "web.port" : 8082,
   "inventory": {
     "directories": [
       "./.temp"
