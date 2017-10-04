@@ -52,7 +52,7 @@ public class RecrepApi extends AbstractVerticle {
         // Serve the static resources
         router.route().handler(StaticHandler.create());
 
-        server.requestHandler(router::accept).listen(config().getInteger("http.port", 8082));
+        server.requestHandler(router::accept).listen(config().getInteger("web.port", 8082));
 
         log.info("Started " + this.getClass().getName());
     }
