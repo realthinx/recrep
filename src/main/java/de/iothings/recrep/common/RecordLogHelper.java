@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Observable;
 import java.util.stream.Stream;
 
@@ -35,6 +36,8 @@ public class RecordLogHelper {
 
     private Vertx vertx;
     private RecrepLogHelper log;
+    private Integer rollingLogFileCount = 10;
+    private String defaultLogFileSize = "10 MB";
 
     public RecordLogHelper(Vertx vertx) {
         this.vertx = vertx;
@@ -54,10 +57,10 @@ public class RecordLogHelper {
 
         String fileSize = recordJob.getString(RecrepRecordJobFields.MAX_SIZE_MB);
         if(fileSize == null || fileSize.length() == 0) {
-            fileSize = "10 MB";
+            fileSize = defaultLogFileSize;
         }
         TriggeringPolicy sizeBasedTriggeringPolicy = SizeBasedTriggeringPolicy.createPolicy(fileSize);
-        DefaultRolloverStrategy defaultRolloverStrategy = DefaultRolloverStrategy.createStrategy("10", null,null,null,null,false,config);
+        DefaultRolloverStrategy defaultRolloverStrategy = DefaultRolloverStrategy.createStrategy(rollingLogFileCount+"", null,null,null,null,false,config);
 
         Appender appender = RollingFileAppender.newBuilder()
                 .withName(recordJobName)
@@ -71,16 +74,17 @@ public class RecordLogHelper {
                 .build();
 
         appender.start();
+
         config.addAppender(appender);
         AppenderRef ref = AppenderRef.createAppenderRef(recordJobName, null, null);
         AppenderRef[] refs = new AppenderRef[] {ref};
 
         LoggerConfig loggerConfig = LoggerConfig.createLogger(false, Level.INFO, recordJobName, "true", refs, null, config, null );
 
-
         loggerConfig.addAppender(appender, null, null);
         config.addLogger(recordJobName, loggerConfig);
         ctx.updateLoggers();
+
         log.debug("Created log4j2 logger for record job and source: " + recordJobName);
         return LoggerFactory.getLogger(recordJobName);
     }
@@ -97,12 +101,7 @@ public class RecordLogHelper {
 
         try {
 
-            Path dir = FileSystems.getDefault().getPath(replayJob.getString(RecrepReplayJobFields.FILE_PATH));
-            DirectoryStream<Path> stream = Files.newDirectoryStream( dir, replayJob.getString(RecrepReplayJobFields.RECORDJOBNAME)+"*.{log}" );
-
-            ArrayList<Path> pathArrayList = new ArrayList<>();
-            stream.forEach(pathArrayList::add);
-            stream.close();
+            ArrayList<Path> pathArrayList = getRecordLogFiles(replayJob);
 
            return pathArrayList.stream()
                    //.sorted()
@@ -118,6 +117,31 @@ public class RecordLogHelper {
         } catch (Exception x) {
             log.error("Failed to read record log file: " + replayJob.getString(RecrepReplayJobFields.RECORDJOBNAME) + ".log :" + x.getMessage());
             return null;
+        }
+    }
+
+    public Long getRecordLogFileSize(JsonObject job) {
+        ArrayList<Path> pathArrayList = getRecordLogFiles(job);
+        return pathArrayList.stream()
+                .mapToLong(path -> path.toFile().length())
+                .sum();
+    }
+
+    private ArrayList<Path> getRecordLogFiles(JsonObject job) {
+        String jobName = "";
+        try {
+            Path dir = FileSystems.getDefault().getPath(job.getString(RecrepReplayJobFields.FILE_PATH));
+            jobName = (job.getString(RecrepReplayJobFields.RECORDJOBNAME)!=null?job.getString(RecrepReplayJobFields.RECORDJOBNAME):job.getString(RecrepRecordJobFields.NAME));
+            DirectoryStream<Path> stream = Files.newDirectoryStream( dir, jobName+"*.{log}" );
+
+            ArrayList<Path> pathArrayList = new ArrayList<>();
+            stream.forEach(pathArrayList::add);
+            stream.close();
+            return pathArrayList;
+
+        } catch (Exception x) {
+            log.error("Failed to read record log file: " + jobName + ".log :" + x.getMessage());
+            return new ArrayList<Path>();
         }
     }
 
