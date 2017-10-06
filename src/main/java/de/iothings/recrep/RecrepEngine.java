@@ -75,6 +75,7 @@ public class RecrepEngine extends AbstractVerticle {
     private void initializeConfiguration() {
         vertx.eventBus().send(EventBusAddress.CONFIGURATION_REQUEST.toString(), new JsonObject(), configurationReply -> {
             recrepConfiguration = (JsonObject) configurationReply.result().body();
+            restartUnfinishedJobs();
         });
     }
 
@@ -223,6 +224,22 @@ public class RecrepEngine extends AbstractVerticle {
     private JsonObject decodeObject(String object) {
         JsonObject jsonObject = new JsonObject(object);
         return jsonObject;
+    }
+
+    private void restartUnfinishedJobs() {
+        vertx.eventBus().send(EventBusAddress.STATE_REQUEST.toString(), new JsonObject(), state -> {
+
+            JsonObject currentState = (JsonObject) state.result().body();
+            currentState.getJsonObject(RecrepEventFields.PAYLOAD).getJsonArray("recordJobs").forEach(job -> {
+               JsonObject recordJob = (JsonObject) job;
+                Long timestampEnd = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_END);
+               if(timestampEnd == null || timestampEnd > System.currentTimeMillis()) {
+                   log.info("Restarting unfinished job: " + recordJob.getString(RecrepRecordJobFields.NAME));
+                   startRecordStream(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_REQUEST, recordJob));
+               }
+            });
+        });
+
     }
 
     private void monitorResources() {

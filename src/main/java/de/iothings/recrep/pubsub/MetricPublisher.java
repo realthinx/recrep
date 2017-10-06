@@ -3,7 +3,6 @@ package de.iothings.recrep.pubsub;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import de.iothings.recrep.common.RecordLogHelper;
 import de.iothings.recrep.common.RecrepLogHelper;
 import de.iothings.recrep.model.*;
 import io.vertx.core.Vertx;
