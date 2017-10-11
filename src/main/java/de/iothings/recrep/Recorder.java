@@ -13,8 +13,6 @@ import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 
 public class Recorder extends AbstractVerticle {
@@ -24,7 +22,6 @@ public class Recorder extends AbstractVerticle {
     private EventSubscriber eventSubscriber;
     private JsonObject recrepConfiguration;
 
-    private JsonObject recordJob;
     private long timerId;
 
     private Handler<JsonObject> startRecordJobHandler = event -> startRecordJob(event);
@@ -64,12 +61,15 @@ public class Recorder extends AbstractVerticle {
 
     private void startRecordJob(JsonObject event) {
 
-        recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
+        JsonObject recordJob = RecrepJobRegistry.recordJobMap.get(event.getJsonObject(RecrepEventFields.PAYLOAD).getString(RecrepRecordJobFields.NAME));
         final ArrayList<MessageConsumer<JsonObject>> dataStreamConsumer = new ArrayList<>();
 
         long now = System.currentTimeMillis();
         long start = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_START) - now;
         Long optionalEnd = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_END);
+        if(start < 1000) {
+            start = 1000;
+        }
         long end = optionalEnd != null ? optionalEnd - now : start;
 
         vertx.eventBus().consumer(RecrepSignalType.METRICS + "-" + recordJob.getString(RecrepRecordJobFields.NAME),
@@ -124,23 +124,27 @@ public class Recorder extends AbstractVerticle {
 
             try {
                 if (end > start) {
-                    timerId = vertx.setTimer(end, tick -> {
-                        RecrepJobRegistry.unregisterRecordStreamHandler(recordJob.getString(RecrepRecordJobFields.NAME)).forEach(deploymentID -> {
-                            vertx.undeploy(deploymentID);
-                        });
-                        eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_FINISHED, recordJob));
+                    vertx.setTimer(end, tick -> {
+                        if(RecrepJobRegistry.recordJobMap.containsKey(recordJob.getString(RecrepRecordJobFields.NAME))) {
+                            RecrepJobRegistry.unregisterRecordStreamHandler(recordJob.getString(RecrepRecordJobFields.NAME)).forEach(deploymentID -> {
+                                vertx.undeploy(deploymentID);
+                            });
+                            eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_FINISHED, recordJob));
+                        }
                     });
                 }
             } catch (IllegalArgumentException x) {
                 log.warn(x.getMessage());
             }
         } else {
-            log.warn("Discarding Record Job. Start time is in the past.");
+            log.warn("Discarding Record Job. End time is in the past.");
         }
     }
 
     private void cancelRecordJobHandler(JsonObject event) {
         vertx.cancelTimer(timerId);
+
+        JsonObject recordJob = RecrepJobRegistry.recordJobMap.get(event.getJsonObject(RecrepEventFields.PAYLOAD).getString(RecrepRecordJobFields.NAME));
 
         RecrepJobRegistry.unregisterRecordStreamHandler(recordJob.getString(RecrepRecordJobFields.NAME)).forEach(deploymentID -> {
             vertx.undeploy(deploymentID);
@@ -157,10 +161,10 @@ public class Recorder extends AbstractVerticle {
                 .stream()
                 .map( mapping -> (JsonObject) mapping )
                 .filter( mapping -> mapping.getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER)
-                        .equals(metric.getString(RecrepEndpointMetricFields.ENDPOINT_IDENTIFIER)))
+                        .equals(metric.getString(RecrepJobMetricFields.ENDPOINT_IDENTIFIER)))
                 .findFirst()
                 .ifPresent( mapping -> {
-                    mapping.put(RecrepEndpointMappingFields.METRICS, metric.getJsonObject(RecrepEndpointMetricFields.METRICS));
+                    mapping.put(RecrepEndpointMappingFields.METRICS, metric.getJsonObject(RecrepJobMetricFields.METRICS));
                 } );
     }
 }

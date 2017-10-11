@@ -4,15 +4,12 @@ import com.codahale.metrics.Counter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import de.iothings.recrep.common.RecrepLogHelper;
-import de.iothings.recrep.model.EventBusAddress;
-import de.iothings.recrep.model.RecrepEndpointMetricFields;
-import de.iothings.recrep.model.RecrepSignalType;
+import de.iothings.recrep.model.*;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
+import java.io.File;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
@@ -30,9 +27,15 @@ public class MetricPublisher {
     private HashMap<String, Meter> messageMeters;
     private HashMap<String, Counter> sizeCounters;
     private HashMap<String, Meter> sizeMeters;
+    private Counter diskSpaceUsedCounter;
+    private Counter diskSpaceAvailableCounter;
     private MetricRegistry metrics;
+    private boolean endlessJob;
+    private String jobName;
 
-    public MetricPublisher(Vertx vertx, String jobName) {
+    public MetricPublisher(Vertx vertx, JsonObject job) {
+        this.jobName = job.getString(RecrepReplayJobFields.NAME);
+        this.endlessJob = (job.getLong(RecrepRecordJobFields.TIMESTAMP_END) == null);
         this.vertx = vertx;
         this.metrics = new MetricRegistry();
         this.eventBusAddress = METRIC_ADRESS_PREFIX + jobName;
@@ -41,26 +44,48 @@ public class MetricPublisher {
         this.messageMeters = new HashMap<>();
         this.sizeCounters = new HashMap<>();
         this.sizeMeters = new HashMap<>();
+        this.diskSpaceUsedCounter = metrics.counter(name(jobName + "_diskSpaceUsedCounter"));
+        this.diskSpaceAvailableCounter = metrics.counter(name(jobName + "_diskSpaceAvailableCounter"));
         this.timestampStart = System.currentTimeMillis();
     }
 
     public void publishMessageMetrics(String endpointIdentifier, long bytes) {
-        countMessage(endpointIdentifier);
-        meterMessage(endpointIdentifier);
-        countSize(endpointIdentifier, bytes);
+        if(!endlessJob) {
+            countMessage(endpointIdentifier);
+            countSize(endpointIdentifier, bytes);
+        }
         meterSize(endpointIdentifier, bytes);
+        meterMessage(endpointIdentifier);
+        publishMetricsUpdate(endpointIdentifier);
+    }
 
+    public void countResourceMetrics(long bytes, String path) {
+        countDiskSpaceUsed(bytes);
+        countDiskSpaceAvailable(path);
+    }
+
+    private void publishMetricsUpdate(String endpointIdentifier) {
         vertx.eventBus().publish(eventBusAddress, new JsonObject().put("endpointIdentifier", endpointIdentifier)
                 .put("metrics", getMetric(endpointIdentifier)));
         log.debug("Published to: " + eventBusAddress + " - Identifier: " + endpointIdentifier + " - " + getMetric(endpointIdentifier).toString());
     }
 
     private JsonObject getMetric(String endpointIdentifier) {
-       return new JsonObject()
-               .put(RecrepEndpointMetricFields.MESSAGE_COUNT, messageCounters.get(endpointIdentifier).getCount())
-               .put(RecrepEndpointMetricFields.MESSAGE_AVERAGE_RATE_SECOND, messageMeters.get(endpointIdentifier).getMeanRate())
-               .put(RecrepEndpointMetricFields.MESSAGE_SIZE_BYTES, sizeCounters.get(endpointIdentifier).getCount())
-               .put(RecrepEndpointMetricFields.MESSAGE_AVERAGE_SIZE_BYTES, sizeMeters.get(endpointIdentifier).getMeanRate());
+
+        JsonObject metric = new JsonObject();
+
+        if(!endlessJob) {
+            metric
+                .put(RecrepJobMetricFields.MESSAGE_COUNT, messageCounters.get(endpointIdentifier).getCount())
+                .put(RecrepJobMetricFields.MESSAGE_SIZE_BYTES, sizeCounters.get(endpointIdentifier).getCount());
+        }
+        metric
+           .put(RecrepJobMetricFields.MESSAGE_AVERAGE_RATE_SECOND, messageMeters.get(endpointIdentifier).getMeanRate())
+           .put(RecrepJobMetricFields.MESSAGE_AVERAGE_SIZE_BYTES, sizeMeters.get(endpointIdentifier).getMeanRate())
+           .put(RecrepJobMetricFields.DISK_SIZE_USED, diskSpaceUsedCounter.getCount())
+           .put(RecrepJobMetricFields.DISK_SIZE_AVAILABLE, diskSpaceAvailableCounter.getCount());
+
+        return metric;
     }
 
     private void countMessage(String endpointIdentifier) {
@@ -101,6 +126,29 @@ public class MetricPublisher {
         } else {
             sizeMeters.get(endpointIdentifier).mark(bytes);
         }
+    }
+
+    private void countDiskSpaceUsed(long bytes) {
+        if(diskSpaceUsedCounter.getCount() < bytes) {
+            diskSpaceUsedCounter.inc(bytes - diskSpaceUsedCounter.getCount());
+        } else {
+            diskSpaceUsedCounter.dec(diskSpaceUsedCounter.getCount() - bytes);
+        }
+    }
+
+    private void countDiskSpaceAvailable(String path) {
+        try {
+            File file = new File(path);
+            long freeSpace = file.getFreeSpace();
+            if(diskSpaceAvailableCounter.getCount() < freeSpace) {
+                diskSpaceAvailableCounter.inc(freeSpace - diskSpaceAvailableCounter.getCount());
+            } else {
+                diskSpaceAvailableCounter.dec(diskSpaceAvailableCounter.getCount() - freeSpace);
+            }
+        } catch (Exception x) {
+            // silent
+        }
+
     }
 
 }

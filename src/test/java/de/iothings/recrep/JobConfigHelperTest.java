@@ -26,7 +26,6 @@ public class JobConfigHelperTest {
 
     private String[] paths = new String[] { "./.temp1", "./.temp2", "./.temp3" };
 
-
     @Before
     public void setup() {
 

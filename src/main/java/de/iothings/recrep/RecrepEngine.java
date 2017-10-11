@@ -40,7 +40,6 @@ public class RecrepEngine extends AbstractVerticle {
     private final Handler<JsonObject> endReplayStreamHandler = this::endReplayStream;
     private Handler<JsonObject> configurationUpdateHandler = this::handleConfigurationUpdate;
 
-
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;
 
@@ -52,6 +51,7 @@ public class RecrepEngine extends AbstractVerticle {
         eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
         subscribeToReqrepEvents();
         initializeConfiguration();
+        monitorResources();
         log.info("Started " + this.getClass().getName());
     }
 
@@ -75,6 +75,7 @@ public class RecrepEngine extends AbstractVerticle {
     private void initializeConfiguration() {
         vertx.eventBus().send(EventBusAddress.CONFIGURATION_REQUEST.toString(), new JsonObject(), configurationReply -> {
             recrepConfiguration = (JsonObject) configurationReply.result().body();
+            restartUnfinishedJobs();
         });
     }
 
@@ -83,7 +84,7 @@ public class RecrepEngine extends AbstractVerticle {
 
         JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
         Logger recordLog = recordLogHelper.createAndGetRecordLogger(recordJob);
-        MetricPublisher metricPublisher = new MetricPublisher(vertx, recordJob.getString(RecrepRecordJobFields.NAME));
+        MetricPublisher metricPublisher = new MetricPublisher(vertx, recordJob);
 
         MessageConsumer<JsonObject> recordStream = vertx.eventBus().consumer(recordJob.getString(RecrepRecordJobFields.NAME), message -> {
             String payload = encodeObject(message.body());
@@ -93,7 +94,9 @@ public class RecrepEngine extends AbstractVerticle {
         });
 
         try {
+            RecrepJobRegistry.registerRecordJob(recordJob);
             RecrepJobRegistry.registerRecordStreamConsumer(recordJob.getString(RecrepRecordJobFields.NAME),recordStream);
+            RecrepJobRegistry.registerMetricPublisher(recordJob.getString(RecrepRecordJobFields.NAME),metricPublisher);
             eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDSTREAM_CREATED, recordJob));
         } catch (Exception x) {
             log.error("Failed to register message consumer for record stream: " + x.getMessage());
@@ -106,6 +109,8 @@ public class RecrepEngine extends AbstractVerticle {
     private void endRecordStream(JsonObject event) {
         JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
         RecrepJobRegistry.unregisterRecordStreamConsumer(recordJob.getString(RecrepRecordJobFields.NAME));
+        RecrepJobRegistry.unregisterMetricPublisher(recordJob.getString(RecrepRecordJobFields.NAME));
+        RecrepJobRegistry.unregisterRecordJob(recordJob.getString(RecrepRecordJobFields.NAME));
         recordLogHelper.removeRecordLogger(recordJob.getString(RecrepRecordJobFields.NAME));
         eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDSTREAM_ENDED, recordJob));
     }
@@ -113,7 +118,7 @@ public class RecrepEngine extends AbstractVerticle {
     private void startReplayStream(JsonObject event) {
 
         JsonObject replayJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
-        MetricPublisher metricPublisher = new MetricPublisher(vertx, replayJob.getString(RecrepReplayJobFields.NAME));
+        MetricPublisher metricPublisher = new MetricPublisher(vertx, replayJob);
 
         ArrayList<ObservableHandler<Message<String>>> endpointReadyTriggers = new ArrayList<>();
         HashMap<String, MessageProducer<JsonObject>> messageProducers = new HashMap<>();
@@ -220,4 +225,37 @@ public class RecrepEngine extends AbstractVerticle {
         JsonObject jsonObject = new JsonObject(object);
         return jsonObject;
     }
+
+    private void restartUnfinishedJobs() {
+        vertx.eventBus().send(EventBusAddress.STATE_REQUEST.toString(), new JsonObject(), state -> {
+
+            JsonObject currentState = (JsonObject) state.result().body();
+            currentState.getJsonObject(RecrepEventFields.PAYLOAD).getJsonArray("recordJobs").forEach(job -> {
+               JsonObject recordJob = (JsonObject) job;
+                Long timestampEnd = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_END);
+               if(timestampEnd == null || timestampEnd > System.currentTimeMillis()) {
+                   log.info("Restarting unfinished job: " + recordJob.getString(RecrepRecordJobFields.NAME));
+                   startRecordStream(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_REQUEST, recordJob));
+               }
+            });
+        });
+
+    }
+
+    private void monitorResources() {
+        vertx.setPeriodic(10000l, tick -> {
+            vertx.eventBus().send(EventBusAddress.STATE_REQUEST.toString(), new JsonObject(), state -> {
+                JsonObject currentState = (JsonObject) state.result().body();
+                currentState.getJsonObject(RecrepEventFields.PAYLOAD).getJsonArray("activeRecordJobs").forEach( recordJob -> {
+                    JsonObject job = (JsonObject) recordJob;
+                    MetricPublisher metricPublisher = RecrepJobRegistry.recordStreamMetricPublisherMap.get(job.getString(RecrepRecordJobFields.NAME));
+                    if(metricPublisher != null) {
+                        metricPublisher.countResourceMetrics(recordLogHelper.getRecordLogFileSize(job), job.getString(RecrepReplayJobFields.FILE_PATH));
+                    }
+                });
+            });
+        });
+    }
+
+
 }
