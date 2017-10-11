@@ -36,8 +36,8 @@ public class RecordLogHelper {
 
     private Vertx vertx;
     private RecrepLogHelper log;
-    private Integer rollingLogFileCount = 10;
-    private String defaultLogFileSize = "10 MB";
+    private Integer rollingLogFileCount = 9;
+    private Integer defaultLogFileSizeMb = 10;
 
     public RecordLogHelper(Vertx vertx) {
         this.vertx = vertx;
@@ -55,12 +55,14 @@ public class RecordLogHelper {
                 .withPattern("%d{UNIX_MILLIS}|%m%n")
                 .build();
 
-        String fileSize = recordJob.getString(RecrepRecordJobFields.MAX_SIZE_MB);
-        if(fileSize == null || fileSize.length() == 0) {
-            fileSize = defaultLogFileSize;
+        Integer fileSize = recordJob.getInteger(RecrepRecordJobFields.MAX_SIZE_MB);
+        if(fileSize == null) {
+            fileSize = defaultLogFileSizeMb;
         }
-        TriggeringPolicy sizeBasedTriggeringPolicy = SizeBasedTriggeringPolicy.createPolicy(fileSize);
-        DefaultRolloverStrategy defaultRolloverStrategy = DefaultRolloverStrategy.createStrategy(rollingLogFileCount+"", null,null,null,null,false,config);
+        String sizeString = (fileSize * 1024) / (rollingLogFileCount + 1) + "KB";
+        log.debug("Sizebased Policy with size: " + sizeString);
+        TriggeringPolicy sizeBasedTriggeringPolicy = SizeBasedTriggeringPolicy.createPolicy(sizeString);
+        DefaultRolloverStrategy defaultRolloverStrategy = DefaultRolloverStrategy.createStrategy(rollingLogFileCount+"", null,null,null,null,false, config);
 
         Appender appender = RollingFileAppender.newBuilder()
                 .withName(recordJobName)
