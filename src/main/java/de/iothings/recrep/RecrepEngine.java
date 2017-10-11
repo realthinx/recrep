@@ -40,6 +40,7 @@ public class RecrepEngine extends AbstractVerticle {
     private final Handler<JsonObject> endReplayStreamHandler = this::endReplayStream;
     private Handler<JsonObject> configurationUpdateHandler = this::handleConfigurationUpdate;
 
+
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;
 

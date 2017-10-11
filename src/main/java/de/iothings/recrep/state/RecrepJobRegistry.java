@@ -5,6 +5,7 @@ import de.iothings.recrep.model.RecrepReplayJobFields;
 import de.iothings.recrep.pubsub.MetricPublisher;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
+import org.apache.lucene.index.IndexWriter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,10 +22,16 @@ public class RecrepJobRegistry {
     public static  HashMap<String, MessageConsumer> recordStreamConsumerMap = new HashMap<String, MessageConsumer>();
     public static  HashMap<String, MessageConsumer> replayStreamConsumerMap = new HashMap<String, MessageConsumer>();
 
+    public static  HashMap<String, MessageConsumer> indexStreamConsumerMap = new HashMap<String, MessageConsumer>();
+
     public static HashMap<String, ArrayList<String>> recordStreamHandlerMap = new HashMap<>();
     public static HashMap<String, ArrayList<String>> replayStreamHandlerMap = new HashMap<>();
 
     public static HashMap<String, MetricPublisher> recordStreamMetricPublisherMap = new HashMap<>();
+
+    public static HashMap<String, IndexWriter> recordJobIndexerMap = new HashMap<>();
+
+
 
     public static void unregisterRecordStreamConsumer(String jobName) {
         if(recordStreamConsumerMap.containsKey(jobName)) {
@@ -99,6 +106,27 @@ public class RecrepJobRegistry {
 
     public static void unregisterReplayJob(String jobName) {
         replayJobMap.remove(jobName);
+    }
+
+    public static void registerRecordJobIndexer(JsonObject replayJob, IndexWriter indexWriter) {
+        recordJobIndexerMap.put(replayJob.getString(RecrepReplayJobFields.NAME), indexWriter);
+    }
+
+    public static IndexWriter unregisterRecordJobIndexer(String jobName) {
+        return recordJobIndexerMap.remove(jobName);
+    }
+
+    public static void unregisterIndexStreamConsumer(String jobName) {
+        if(indexStreamConsumerMap.containsKey(jobName)) {
+            indexStreamConsumerMap.remove(jobName).unregister();
+        }
+    }
+
+    public static void registerIndexStreamConsumer(String jobName, MessageConsumer messageConsumer) throws Exception {
+        if(indexStreamConsumerMap.containsKey(jobName)) {
+            throw new Exception("This index stream consumer is already registered.");
+        }
+        indexStreamConsumerMap.put(jobName, messageConsumer);
     }
 
 }

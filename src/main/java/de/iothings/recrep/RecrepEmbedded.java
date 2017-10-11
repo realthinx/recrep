@@ -30,6 +30,7 @@ public class RecrepEmbedded {
                 RecrepDefaultLogger.class.getName(),
                 RecrepState.class.getName(),
                 RecrepEngine.class.getName(),
+                RecrepIndexer.class.getName(),
                 Replayer.class.getName(),
                 Recorder.class.getName(),
                 RecrepApi.class.getName()));

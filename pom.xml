@@ -24,6 +24,7 @@
         <version.junit>4.12</version.junit>
         <version.commons.io>2.5</version.commons.io>
         <version.reactivestreams>1.0.0</version.reactivestreams>
+        <version.lucene>7.0.0</version.lucene>
         <pluginversion.compile>3.6.0</pluginversion.compile>
     </properties>
 
@@ -81,6 +82,23 @@
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j-impl</artifactId>
             <version>${version.log4j}</version>
+        </dependency>
+
+        <!-- lucene indexing -->
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-core</artifactId>
+            <version>${version.lucene}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-analyzers-common</artifactId>
+            <version>${version.lucene}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-queryparser</artifactId>
+            <version>${version.lucene}</version>
         </dependency>
 
         <!-- JUnit Tests-->
