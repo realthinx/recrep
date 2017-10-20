@@ -62,7 +62,7 @@ public class TimelineWriteStream implements WriteStream<String> {
             if(speedFactor == null || speedFactor == 0) {
                 log.debug("Speed factor is not set, message replayed without delay");
                 messageProducer.send(message);
-            } else {
+            } else if (speedFactor > 0) {
                 Long recordTimestamp = message.getLong("timestamp");
                 Long nowTimestamp = System.currentTimeMillis();
                 if(lastTimestamp == null) {
@@ -106,7 +106,7 @@ public class TimelineWriteStream implements WriteStream<String> {
         Long schedule = 0l;
         if(this.speedFactor == 1) {
             schedule = recordTimestamp + timestampOffset.get();
-        } else {
+        } else if (speedFactor > 0) {
             schedule = lastSchedule.get() + ((recordTimestamp - lastTimestamp.get()) / this.speedFactor);
         }
         return schedule;
@@ -150,7 +150,7 @@ public class TimelineWriteStream implements WriteStream<String> {
     @Override
     public void end() {
         log.debug("WriteStream end() called");
-        Long delay = (lastSchedule.get() - System.currentTimeMillis());
+        Long delay = (lastSchedule != null ? (lastSchedule.get() - System.currentTimeMillis()) : 0);
         if(delay < 0) {
             delay = 100L;
         } else {
