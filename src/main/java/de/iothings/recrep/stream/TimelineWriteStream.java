@@ -59,7 +59,7 @@ public class TimelineWriteStream implements WriteStream<String> {
         log.debug("write() called");
         try {
             JsonObject message = parse(s);
-            if(speedFactor == null) {
+            if(speedFactor == null || speedFactor == 0) {
                 log.debug("Speed factor is not set, message replayed without delay");
                 messageProducer.send(message);
             } else {
