@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -109,7 +110,7 @@ public class RecordLogHelper {
                    //.sorted()
                    .map(path -> {
                 try {
-                    return Files.lines(path);
+                    return Files.lines(path, Charset.forName("UTF-8"));
                 } catch (IOException e) {
                     log.error("Failed to read record log file: " + path + ": " + e.getMessage());
                 }
