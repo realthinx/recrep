@@ -74,8 +74,10 @@ public class RecrepEngine extends AbstractVerticle {
 
     private void initializeConfiguration() {
         vertx.eventBus().send(EventBusAddress.CONFIGURATION_REQUEST.toString(), new JsonObject(), configurationReply -> {
+            if(recrepConfiguration == null) {
+                restartUnfinishedJobs();
+            }
             recrepConfiguration = (JsonObject) configurationReply.result().body();
-            restartUnfinishedJobs();
         });
     }
 
