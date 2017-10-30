@@ -6,7 +6,7 @@
     <groupId>de.iothings.recrep</groupId>
     <artifactId>recrep</artifactId>
 
-    <version>0.0.3-SNAPSHOT</version>
+    <version>0.0.4-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>recrep</name>
@@ -18,7 +18,7 @@
     </scm>
 
     <properties>
-        <version.vertx>3.4.1</version.vertx>
+        <version.vertx>3.5.0</version.vertx>
         <version.metrics>3.2.2</version.metrics>
         <version.log4j>2.7</version.log4j>
         <version.junit>4.12</version.junit>
