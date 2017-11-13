@@ -67,6 +67,9 @@ public class Recorder extends AbstractVerticle {
         long now = System.currentTimeMillis();
         long start = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_START) - now;
         Long optionalEnd = recordJob.getLong(RecrepRecordJobFields.TIMESTAMP_END);
+        if(start < 1000) {
+            start = 1000;
+        }
         long end = optionalEnd != null ? optionalEnd - now : start;
 
         vertx.eventBus().consumer(RecrepSignalType.METRICS + "-" + recordJob.getString(RecrepRecordJobFields.NAME),
@@ -134,7 +137,7 @@ public class Recorder extends AbstractVerticle {
                 log.warn(x.getMessage());
             }
         } else {
-            log.warn("Discarding Record Job. Start time is in the past.");
+            log.warn("Discarding Record Job. End time is in the past.");
         }
     }
 
