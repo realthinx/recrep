@@ -1,7 +1,9 @@
 package de.iothings.recrep;
 
+import de.iothings.recrep.common.Constants;
 import de.iothings.recrep.model.RecrepEndpointMappingFields;
 import de.iothings.recrep.model.RecrepRecordJobFields;
+import de.iothings.recrep.model.RecrepRecordMessageFields;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -43,14 +45,15 @@ public class TestRecordEndpoint extends AbstractVerticle {
 
             String word1 = randomWords.get(randomNum1);
             String word2 = randomWords.get(randomNum2);
-            DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader("source", sourceIdentifier);
-            deliveryOptions.addHeader("index.word1", word1);
-            deliveryOptions.addHeader("index.word2", word2);
+            DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader(RecrepRecordMessageFields.SOURCE, sourceIdentifier);
+            deliveryOptions.addHeader(RecrepRecordMessageFields.RECORDJOB_NAME, config().getString(RecrepRecordJobFields.NAME));
+            deliveryOptions.addHeader(Constants.INDEXING_HEADER_PREFIX + "word1", word1);
+            deliveryOptions.addHeader(Constants.INDEXING_HEADER_PREFIX + "word2", word2);
 
             JsonObject jsonObject = new JsonObject()
                     .put("id",tick)
-                    .put("payload", word1 + " " + word2)
-                    .put("source", sourceIdentifier);
+                    .put(RecrepRecordMessageFields.PAYLOAD, word1 + " " + word2)
+                    .put(RecrepRecordMessageFields.SOURCE, sourceIdentifier);
 
             vertx.eventBus().publish(eventBusAddress, jsonObject, deliveryOptions);
         });

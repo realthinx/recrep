@@ -11,7 +11,10 @@ public class RecrepRecordJobFields {
     public static final String SOURCE_MAPPINGS = "sourceMappings";
     public static final String TIMESTAMP_START = "timestampStart";
     public static final String TIMESTAMP_END = "timestampEnd";
-    public static final String MAX_SIZE_MB = "maxSizeMb";
     public static final String FILE_PATH = "filePath";
+    public static final String LOGGER = "logger";
+    public static final String LOGGER_MAX_SIZE_MB = "loggerMaxSizeMb";
+    public static final String INDEXER = "indexer";
+    public static final String INDEXER_MAX_SIZE_MB = "indexerMaxSizeMb";
 
 }

@@ -56,7 +56,7 @@ public class RecordLogHelper {
                 .withPattern("%d{UNIX_MILLIS}|%m%n")
                 .build();
 
-        Integer fileSize = recordJob.getInteger(RecrepRecordJobFields.MAX_SIZE_MB);
+        Integer fileSize = recordJob.getInteger(RecrepRecordJobFields.LOGGER_MAX_SIZE_MB);
         if(fileSize == null) {
             fileSize = defaultLogFileSizeMb;
         }

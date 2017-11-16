@@ -1,16 +1,11 @@
 package de.iothings.recrep;
 
-import io.vertx.ext.unit.TestContext;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.LongPoint;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.ParseException;
-import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
-import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.junit.Test;
 
@@ -41,7 +36,7 @@ public class IndexQueryTest {
 
                 System.out.println("Searching for '" + searchString + "' using QueryParser");
                 TermQuery tq = new TermQuery(new Term("word1", searchString));
-                Query prq = LongPoint.newRangeQuery("timestamp", 1510761722999l, 1510761725995l);
+                // Query prq = LongPoint.newRangeQuery("timestamp", 1510761722999l, 1510761725995l);
 
                 IndexReader reader = DirectoryReader.open(FSDirectory.open(path));
                 IndexSearcher searcher = new IndexSearcher(reader);
@@ -49,7 +44,7 @@ public class IndexQueryTest {
                 BooleanQuery.Builder builder = new BooleanQuery.Builder();
                 Query query = builder
                         .add(tq, BooleanClause.Occur.MUST)
-                        .add(prq, BooleanClause.Occur.FILTER)
+                        // .add(prq, BooleanClause.Occur.FILTER)
                         .build();
 
                 TopDocs docs = searcher.search(query, 10);
