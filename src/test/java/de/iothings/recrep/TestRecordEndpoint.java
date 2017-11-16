@@ -33,16 +33,25 @@ public class TestRecordEndpoint extends AbstractVerticle {
 
         System.out.println("Deployed Test Record Endpoint: " + this.getClass().getName() + " - " + config().toString());
 
-        DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader("source", sourceIdentifier);
+
+
 
         timerId = vertx.setPeriodic(interval, tick -> {
+
             int randomNum1 = ThreadLocalRandom.current().nextInt(0, 6 + 1);
             int randomNum2 = ThreadLocalRandom.current().nextInt(0, 6 + 1);
+
+            String word1 = randomWords.get(randomNum1);
+            String word2 = randomWords.get(randomNum2);
+            DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader("source", sourceIdentifier);
+            deliveryOptions.addHeader("index.word1", word1);
+            deliveryOptions.addHeader("index.word2", word2);
+
             JsonObject jsonObject = new JsonObject()
-                    .put("index",tick)
-                    // .put("payload",new String(UUID.randomUUID().toString()))
-                    .put("payload", randomWords.get(randomNum1) + " " + randomWords.get(randomNum2))
+                    .put("id",tick)
+                    .put("payload", word1 + " " + word2)
                     .put("source", sourceIdentifier);
+
             vertx.eventBus().publish(eventBusAddress, jsonObject, deliveryOptions);
         });
     }

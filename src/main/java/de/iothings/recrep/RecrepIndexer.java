@@ -14,10 +14,7 @@ import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.StringField;
-import org.apache.lucene.document.TextField;
+import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.Directory;
@@ -69,8 +66,22 @@ public class RecrepIndexer extends AbstractVerticle {
             MessageConsumer<JsonObject> recordStream = vertx.eventBus().consumer(recordJob.getString(RecrepRecordJobFields.NAME), message -> {
                 String payload = encodeObject(message.body());
                 Document doc = new Document();
-                doc.add(new TextField("content", payload, Field.Store.YES));
-                doc.add(new StringField("id", UUID.randomUUID().toString(), Field.Store.YES));
+                doc.add(new LongPoint("timestamp", System.currentTimeMillis()));
+
+                message.headers().entries().stream()
+                        .filter(
+                            entry -> {
+                                return entry.getKey().startsWith("index.");
+                            }
+                        )
+                        .forEach(
+                            entry -> {
+                                doc.add(new StringField(entry.getKey().substring(6), entry.getValue(), Field.Store.YES));
+                            }
+                        );
+
+                doc.add(new StoredField("payload", payload));
+
                 try {
                     indexWriter.addDocument(doc);
                     indexWriter.commit();
@@ -80,8 +91,10 @@ public class RecrepIndexer extends AbstractVerticle {
 
             });
 
+            RecrepJobRegistry.registerIndexStreamConsumer(recordJob.getString(RecrepRecordJobFields.NAME), recordStream);
 
-        } catch(IOException iox) {
+
+        } catch(Exception iox) {
             log.error("Failed to create Record Job Index");
         }
 
@@ -92,6 +105,7 @@ public class RecrepIndexer extends AbstractVerticle {
 
         JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
 
+        RecrepJobRegistry.unregisterIndexStreamConsumer(recordJob.getString(RecrepRecordJobFields.NAME));
         IndexWriter indexWriter = RecrepJobRegistry.unregisterRecordJobIndexer(recordJob.getString(RecrepRecordJobFields.NAME));
         if(indexWriter != null) {
             try {
