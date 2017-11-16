@@ -13,6 +13,8 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 /**
@@ -27,6 +29,15 @@ public class IndexQueryTest {
     public void testIndexQuery() throws ParseException {
         try {
             Optional<Path> indexPath = Files.list(FileSystems.getDefault().getPath(testRecordJobFilePath))
+                .filter(path -> path.toFile().isDirectory())
+                .flatMap(path -> {
+                    try {
+                        return Files.list(path);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                })
                 .filter(path -> path.toFile().isDirectory())
                 .findFirst();
 
