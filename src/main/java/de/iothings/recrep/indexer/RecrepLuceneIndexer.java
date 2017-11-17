@@ -94,7 +94,7 @@ public class RecrepLuceneIndexer extends AbstractVerticle {
         message.headers().entries().stream()
                 .filter(entry -> entry.getKey().startsWith(Constants.INDEXING_HEADER_PREFIX))
                 .forEach(entry -> {
-                    doc.add(new StringField(entry.getKey().substring(6), (entry.getValue()!=null?entry.getValue().toLowerCase():""), Field.Store.YES));
+                    doc.add(new StringField(entry.getKey().substring(6), entry.getValue(), Field.Store.YES));
                     indexBuffer.append(entry.getValue() + " ");
                 });
         doc.add(new TextField(RecrepIndexDocumentFields.DEFAULT_INDEX, indexBuffer.toString(), Field.Store.NO));

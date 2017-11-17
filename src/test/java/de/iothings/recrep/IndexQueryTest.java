@@ -1,6 +1,7 @@
 package de.iothings.recrep;
 
 import de.iothings.recrep.model.RecrepIndexDocumentFields;
+import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
@@ -16,9 +17,7 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -27,7 +26,7 @@ import java.util.stream.Collectors;
 public class IndexQueryTest {
 
     String testRecordJobFilePath = "./.temp";
-    String searchString = "word2:Blume +auto -Hund";
+    String searchString = "word2:Blume OR word1:Auto";
 
     @Test
     public void testIndexQuery() throws ParseException {
@@ -48,7 +47,7 @@ public class IndexQueryTest {
             if (paths != null && paths.size() > 0) {
 
                 System.out.println("Searching for '" + searchString + "' using QueryParser");
-                QueryParser queryParser = new QueryParser(RecrepIndexDocumentFields.DEFAULT_INDEX, new StandardAnalyzer());
+                QueryParser queryParser = new QueryParser(RecrepIndexDocumentFields.DEFAULT_INDEX, new WhitespaceAnalyzer());
 
                 Query query = queryParser.parse(searchString);
 
