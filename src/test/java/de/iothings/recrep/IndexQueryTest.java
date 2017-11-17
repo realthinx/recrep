@@ -1,10 +1,12 @@
 package de.iothings.recrep;
 
+import de.iothings.recrep.model.RecrepIndexDocumentFields;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.FSDirectory;
 import org.junit.Test;
@@ -13,8 +15,6 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 /**
@@ -23,7 +23,7 @@ import java.util.Optional;
 public class IndexQueryTest {
 
     String testRecordJobFilePath = "./.temp";
-    String searchString = "Blume";
+    String searchString = "word2:Blume +auto -Hund";
 
     @Test
     public void testIndexQuery() throws ParseException {
@@ -46,17 +46,14 @@ public class IndexQueryTest {
                 Path path = indexPath.get();
 
                 System.out.println("Searching for '" + searchString + "' using QueryParser");
-                TermQuery tq = new TermQuery(new Term("word1", searchString));
-                // Query prq = LongPoint.newRangeQuery("timestamp", 1510761722999l, 1510761725995l);
+                QueryParser queryParser = new QueryParser(RecrepIndexDocumentFields.DEFAULT_INDEX, new StandardAnalyzer());
+
+                Query query = queryParser.parse(searchString);
+
 
                 IndexReader reader = DirectoryReader.open(FSDirectory.open(path));
                 IndexSearcher searcher = new IndexSearcher(reader);
 
-                BooleanQuery.Builder builder = new BooleanQuery.Builder();
-                Query query = builder
-                        .add(tq, BooleanClause.Occur.MUST)
-                        // .add(prq, BooleanClause.Occur.FILTER)
-                        .build();
 
                 TopDocs docs = searcher.search(query, 10);
                 ScoreDoc[] hits = docs.scoreDocs;
@@ -65,7 +62,7 @@ public class IndexQueryTest {
                 for(int i=0;i<hits.length;++i) {
                     int docId = hits[i].doc;
                     Document d = searcher.doc(docId);
-                    System.out.println((i + 1) + ". " + d.get("word1") + " - " + d.get("payload"));
+                    System.out.println((i + 1) + ". " + d.get("word1") + " - " + d.get("word2") + " - " + d.get("payload"));
                 }
                 reader.close();
             }
