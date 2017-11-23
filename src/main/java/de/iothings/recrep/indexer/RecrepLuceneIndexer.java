@@ -1,6 +1,7 @@
 package de.iothings.recrep.indexer;
 
 import de.iothings.recrep.common.Constants;
+import de.iothings.recrep.common.RecordIndexHelper;
 import de.iothings.recrep.common.RecrepLogHelper;
 import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
@@ -39,6 +40,8 @@ public class RecrepLuceneIndexer extends AbstractVerticle {
 
     private final Handler<JsonObject> startRecordStreamHandler = this::startRecordStream;
     private final Handler<JsonObject> endRecordStreamHandler = this::endRecordStream;
+
+    private final RecordIndexHelper recordIndexHelper = new RecordIndexHelper();
 
     private final DateTimeFormatter rolloverDateTimeFormatter = DateTimeFormatter.ofPattern(Constants.INDEXING_ROLLOVER_DATEFORMAT);
     private Long rolloverTimestamp = 0l;
@@ -120,6 +123,7 @@ public class RecrepLuceneIndexer extends AbstractVerticle {
 
     private void indexRollover(JsonObject recordJob) throws IOException {
         closeIndex(recordJob);
+        houeseKeeping(recordJob);
         createIndex(recordJob);
     }
 
@@ -145,6 +149,16 @@ public class RecrepLuceneIndexer extends AbstractVerticle {
                 indexWriter.close();
             } catch (IOException iox) {
                 log.error("Failed to close index writer. " + iox.getMessage());
+            }
+        }
+    }
+
+    private void houeseKeeping(JsonObject recordJob) {
+        Long indexSize = recordIndexHelper.getIndexSize(recordJob);
+        Long maxIndexSizeMb = recordJob.getLong(RecrepRecordJobFields.INDEXER_MAX_SIZE_MB);
+        if(maxIndexSizeMb != null && maxIndexSizeMb > 0) {
+            if(indexSize > (maxIndexSizeMb * 1024)) {
+                recordIndexHelper.deleteOldestIndex(recordJob);
             }
         }
     }

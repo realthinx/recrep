@@ -22,7 +22,7 @@
         <version.metrics>3.2.2</version.metrics>
         <version.log4j>2.7</version.log4j>
         <version.junit>4.12</version.junit>
-        <version.commons.io>2.5</version.commons.io>
+        <version.commons.io>2.6</version.commons.io>
         <version.reactivestreams>1.0.0</version.reactivestreams>
         <version.lucene>7.0.0</version.lucene>
         <pluginversion.compile>3.6.0</pluginversion.compile>
@@ -114,7 +114,6 @@
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>${version.commons.io}</version>
-            <scope>test</scope>
         </dependency>
 
         <!-- vert.x unit -->

@@ -2,7 +2,6 @@ package de.iothings.recrep;
 
 import de.iothings.recrep.model.RecrepIndexDocumentFields;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
@@ -26,7 +25,7 @@ import java.util.stream.Collectors;
 public class IndexQueryTest {
 
     String testRecordJobFilePath = "./.temp";
-    String searchString = "word2:Blume OR word1:Auto";
+    String searchString = "word1:Auto AND blume";
 
     @Test
     public void testIndexQuery() throws ParseException {

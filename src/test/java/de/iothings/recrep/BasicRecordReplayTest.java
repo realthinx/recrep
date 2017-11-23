@@ -127,6 +127,7 @@ public class BasicRecordReplayTest {
         recordJob.put(RecrepRecordJobFields.TIMESTAMP_START, start);
         recordJob.put(RecrepRecordJobFields.TIMESTAMP_END, end);
         recordJob.put(RecrepRecordJobFields.SOURCE_MAPPINGS, sources);
+        recordJob.put(RecrepRecordJobFields.INDEXER_MAX_SIZE_MB, 1);
         eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_REQUEST, recordJob));
     }
 
