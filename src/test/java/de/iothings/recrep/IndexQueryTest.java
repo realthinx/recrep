@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class IndexQueryTest {
 
     String testRecordJobFilePath = "./.temp";
-    String searchString = "word2:Blume OR word1:Auto";
+    String searchString = "word2:Blume OR word1:Hund";
 
     @Test
     public void testIndexQuery() throws ParseException {

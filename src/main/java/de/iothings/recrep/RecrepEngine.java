@@ -34,6 +34,7 @@ public class RecrepEngine extends AbstractVerticle {
     private JsonObject recrepConfiguration;
 
     private final Handler<JsonObject> startRecordStreamHandler = this::startRecordStream;
+    //private final Handler<JsonObject> startRecordJobAnalysisStreamHandler = this::startRecordJobAnalysisStream;
     private final Handler<JsonObject> saveRecordJobConfigHandler = this::saveJobConfig;
     private final Handler<JsonObject> endRecordStreamHandler = this::endRecordStream;
     private final Handler<JsonObject> startReplayStreamHandler = this::startReplayStream;
@@ -67,6 +68,7 @@ public class RecrepEngine extends AbstractVerticle {
         eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED);
         eventSubscriber.subscribe(saveRecordJobConfigHandler, RecrepEventType.RECORDJOB_FINISHED);
         //eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_CANCEL_REQUEST);
+        //eventSubscriber.subscribe(startRecordJobAnalysisStreamHandler, RecrepEventType.RECORDJOB_ANALYSIS_REQUEST);
         eventSubscriber.subscribe(startReplayStreamHandler, RecrepEventType.REPLAYJOB_REQUEST);
         eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED);
         eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_CANCEL_REQUEST);
@@ -81,7 +83,6 @@ public class RecrepEngine extends AbstractVerticle {
             recrepConfiguration = (JsonObject) configurationReply.result().body();
         });
     }
-
 
     private void startRecordStream(JsonObject event) {
 

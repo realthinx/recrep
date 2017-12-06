@@ -1,5 +1,6 @@
 package de.iothings.recrep;
 
+import de.iothings.recrep.analyser.RecrepLuceneAnalyser;
 import de.iothings.recrep.common.RecrepLogHelper;
 import de.iothings.recrep.indexer.RecrepLuceneIndexer;
 import de.iothings.recrep.state.RecrepState;
@@ -30,6 +31,7 @@ public class RecrepEmbedded {
                 RecrepState.class.getName(),
                 RecrepEngine.class.getName(),
                 RecrepLuceneIndexer.class.getName(),
+                RecrepLuceneAnalyser.class.getName(),
                 Replayer.class.getName(),
                 Recorder.class.getName(),
                 RecrepApi.class.getName()));

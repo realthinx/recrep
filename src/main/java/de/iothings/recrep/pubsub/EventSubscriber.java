@@ -35,14 +35,15 @@ public class EventSubscriber {
         List<RecrepEventType> typesFilterList = Arrays.asList(eventTypes);
 
         MessageConsumer messageConsumer = vertx.eventBus().<JsonObject>consumer(address, message -> {
+            //log.info("address: " + address + " got message: " + message.body());
             RecrepEventType type = Enum.valueOf(RecrepEventType.class, message.body().getString(RecrepEventFields.TYPE));
             if (typesFilterList.contains(type)) {
-                log.debug("Deliver Event type " + type + " payload: " + message.body());
+                log.info("Deliver Event type " + type + " payload: " + message.body());
                 handler.handle(message.body());
             }
         });
 
-        log.debug("Created subscription to address: " + address + " - Event types filter: " + typesFilterList);
+        log.info("Created subscription to address: " + address + " - Event types filter: " + typesFilterList);
 
         return messageConsumer;
     }
