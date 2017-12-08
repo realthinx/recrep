@@ -254,7 +254,7 @@ public class RecrepEngine extends AbstractVerticle {
                     JsonObject job = (JsonObject) recordJob;
                     MetricPublisher metricPublisher = RecrepJobRegistry.recordStreamMetricPublisherMap.get(job.getString(RecrepRecordJobFields.NAME));
                     if(metricPublisher != null) {
-                        metricPublisher.countResourceMetrics(recordLogHelper.getRecordLogFileSize(job), job.getString(RecrepReplayJobFields.FILE_PATH));
+                        metricPublisher.countResourceMetrics();
                     }
                 });
             });
