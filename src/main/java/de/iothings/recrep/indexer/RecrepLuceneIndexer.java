@@ -93,6 +93,7 @@ public class RecrepLuceneIndexer extends AbstractVerticle {
         Long now = System.currentTimeMillis();
         String payload = encodeObject(message.body());
         String jobName = message.headers().get(RecrepRecordMessageFields.RECORDJOB_NAME);
+        String source = message.headers().get(RecrepRecordMessageFields.SOURCE);
 
         Document doc = new Document();
         doc.add(new LongPoint(RecrepIndexDocumentFields.TIMESTAMP, System.currentTimeMillis()));
@@ -105,7 +106,7 @@ public class RecrepLuceneIndexer extends AbstractVerticle {
                     indexBuffer.append(entry.getValue() + " ");
                 });
         doc.add(new TextField(RecrepIndexDocumentFields.DEFAULT_INDEX, indexBuffer.toString(), Field.Store.NO));
-
+        doc.add(new StringField(RecrepIndexDocumentFields.SOURCE, source, Field.Store.YES));
         doc.add(new StoredField(RecrepIndexDocumentFields.PAYLOAD, payload));
 
         try {
