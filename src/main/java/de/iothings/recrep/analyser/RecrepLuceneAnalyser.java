@@ -74,11 +74,12 @@ public class RecrepLuceneAnalyser extends AbstractVerticle {
 
         String recordJob = luceneRequest.getString(RecrepAnalysisFields.RECORD_JOB);
         String luceneQuery = luceneRequest.getString(RecrepAnalysisFields.LUCENE_QUERY);
+        int maxHits = Integer.parseInt(luceneRequest.getString(RecrepAnalysisFields.MAX_HITS));
 
-        query(recordJob, luceneQuery);
+        query(recordJob, luceneQuery, maxHits);
     }
 
-    private void query(String recordJob, String search) {
+    private void query(String recordJob, String search, int maxHits) {
         JsonObject result = new JsonObject();
 
         if(recordJobsBaseFilePath != null) {
@@ -109,7 +110,7 @@ public class RecrepLuceneAnalyser extends AbstractVerticle {
                     MultiReader multiReader = new MultiReader(readers.toArray(new IndexReader[readers.size()]));
                     IndexSearcher searcher = new IndexSearcher(multiReader);
 
-                    TopDocs docs = searcher.search(query, 10);
+                    TopDocs docs = searcher.search(query, maxHits);
                     ScoreDoc[] hits = docs.scoreDocs;
 
                     log.debug("Found " + hits.length + " hits.");
