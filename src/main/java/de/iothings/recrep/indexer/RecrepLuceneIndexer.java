@@ -13,6 +13,7 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexWriter;
@@ -27,6 +28,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by johannes on 06.10.17.
@@ -45,6 +47,8 @@ public class RecrepLuceneIndexer extends AbstractVerticle {
 
     private final DateTimeFormatter rolloverDateTimeFormatter = DateTimeFormatter.ofPattern(Constants.INDEXING_ROLLOVER_DATEFORMAT);
     private Long rolloverTimestamp = 0l;
+    private Long commitInterval = 1000l;
+    private AtomicLong lastCommitInterval = new AtomicLong(0l);
 
     @Override
     public void start() throws Exception {
@@ -112,7 +116,10 @@ public class RecrepLuceneIndexer extends AbstractVerticle {
             }
             if(RecrepJobRegistry.recordJobIndexerMap.containsKey(jobName)) {
                 RecrepJobRegistry.recordJobIndexerMap.get(jobName).addDocument(doc);
-                RecrepJobRegistry.recordJobIndexerMap.get(jobName).commit();
+                if(lastCommitInterval.get() < now - 1000) {
+                    RecrepJobRegistry.recordJobIndexerMap.get(jobName).commit();
+                    lastCommitInterval.set(now);
+                }
             } else {
                 log.error("Can't find record job index writer for job: " + jobName);
             }
@@ -135,7 +142,8 @@ public class RecrepLuceneIndexer extends AbstractVerticle {
                         today.format(rolloverDateTimeFormatter);
         log.debug("Create new index path: " + path);
         Directory dir = FSDirectory.open(Paths.get(path));
-        Analyzer analyzer = new StandardAnalyzer();
+        //Analyzer analyzer = new StandardAnalyzer();
+        Analyzer analyzer = new ClassicAnalyzer();
         IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
         iwc.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
         IndexWriter indexWriter = new IndexWriter(dir, iwc);
