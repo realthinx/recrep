@@ -38,7 +38,7 @@ public class EventSubscriber {
             //log.info("address: " + address + " got message: " + message.body());
             RecrepEventType type = Enum.valueOf(RecrepEventType.class, message.body().getString(RecrepEventFields.TYPE));
             if (typesFilterList.contains(type)) {
-                log.info("Deliver Event type " + type + " payload: " + message.body());
+                log.debug("Deliver Event type " + type + " payload: " + message.body());
                 handler.handle(message.body());
             }
         });
