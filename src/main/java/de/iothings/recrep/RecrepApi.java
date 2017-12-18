@@ -29,11 +29,13 @@ public class RecrepApi extends AbstractVerticle {
 
     private HttpServer server = null;
 
-    private Handler<JsonObject> configurationUpdateHandler = this::handleConfigurationUpdate;
+    // todo: necessary?
+    // private Handler<JsonObject> configurationUpdateHandler = this::handleConfigurationUpdate;
 
     @Override
     public void start() throws Exception {
         eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
+        // todo: necessary?
         subscribeToReqrepEvents();
         initializeConfiguration();
         log.info("Started " + this.getClass().getName());
@@ -47,21 +49,27 @@ public class RecrepApi extends AbstractVerticle {
     }
 
     private void subscribeToReqrepEvents() {
-        eventSubscriber.subscribe(configurationUpdateHandler, RecrepEventType.CONFIGURATION_UPDATE);
+        // todo: necessary?
+        // eventSubscriber.subscribe(configurationUpdateHandler, RecrepEventType.CONFIGURATION_UPDATE);
     }
 
     private void initializeConfiguration() {
         vertx.eventBus().send(EventBusAddress.CONFIGURATION_REQUEST.toString(), new JsonObject(), configurationReply -> {
             recrepConfiguration = (JsonObject) configurationReply.result().body();
+            if(server == null) {
+                startServer();
+            }
         });
     }
 
+    /* todo: necessary?
     private void handleConfigurationUpdate(JsonObject event) {
         recrepConfiguration = event.getJsonObject(RecrepEventFields.PAYLOAD);
         if(server == null) {
             startServer();
         }
     }
+    */
 
     private void startServer() {
         server = vertx.createHttpServer();

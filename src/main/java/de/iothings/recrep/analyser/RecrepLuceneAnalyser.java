@@ -36,7 +36,8 @@ public class RecrepLuceneAnalyser extends AbstractVerticle {
 
     // Pub / Sub Handler
     private final Handler<JsonObject> analysisStreamHandler = this::analysisStreamHandler;
-    private final Handler<JsonObject> configurationStreamHandler = this::handleConfigurationStream;
+    // todo: necessary?
+    // private final Handler<JsonObject> configurationStreamHandler = this::handleConfigurationStream;
 
     private String recordJobsBaseFilePath;
 
@@ -47,16 +48,33 @@ public class RecrepLuceneAnalyser extends AbstractVerticle {
         eventPublisher = new EventPublisher(vertx);
         eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
 
+        initializeConfiguration();
         subscribeToReqrepEvents();
 
         log.info("Started " + this.getClass().getName());
     }
 
     private void subscribeToReqrepEvents() {
-        eventSubscriber.subscribe(configurationStreamHandler, RecrepEventType.CONFIGURATION_UPDATE);
+        // todo: necessary?
+        // eventSubscriber.subscribe(configurationStreamHandler, RecrepEventType.CONFIGURATION_UPDATE);
         eventSubscriber.subscribe(analysisStreamHandler, RecrepEventType.RECORDJOB_ANALYSIS_REQUEST);
     }
 
+    private void initializeConfiguration() {
+        vertx.eventBus().send(EventBusAddress.CONFIGURATION_REQUEST.toString(), new JsonObject(), configurationReply -> {
+            JsonObject configuration = (JsonObject) configurationReply.result().body();
+
+            ArrayList<String> diretories = new ArrayList<>(configuration.getJsonObject(RecrepConfigurationFields.INVENTORY)
+                    .getJsonArray(RecrepConfigurationFields.INVENTORY_DIRECTORIES).getList());
+
+            diretories.forEach(directory -> {
+                // todo: only one base directory supported at the moment => last one wins...
+                recordJobsBaseFilePath = directory + "/";
+            });
+        });
+    }
+
+    /* todo: necessary?
     private void handleConfigurationStream(JsonObject event) {
         JsonObject configuration = event.getJsonObject(RecrepEventFields.PAYLOAD);
         ArrayList<String> diretories = new ArrayList<>(configuration.getJsonObject(RecrepConfigurationFields.INVENTORY)
@@ -67,6 +85,7 @@ public class RecrepLuceneAnalyser extends AbstractVerticle {
             recordJobsBaseFilePath = directory + "/";
         });
     }
+    */
 
     private void analysisStreamHandler(JsonObject event) {
 
