@@ -140,8 +140,8 @@ public class RecrepLuceneAnalyser extends AbstractVerticle {
                         try {
                             Document doc = searcher.doc(scoreDoc.doc);
                             if(doc != null) {
-                                log.debug(String.valueOf(doc.get(RecrepEventFields.PAYLOAD)));
-                                resultDocs.add(new JsonObject(doc.get((RecrepEventFields.PAYLOAD))));
+                                JsonObject jsonDoc = new JsonObject(doc.get((RecrepEventFields.PAYLOAD)));
+                                resultDocs.add(jsonDoc);
                             }
                         } catch (IOException e) {
                             log.error(e.getMessage(), e);
