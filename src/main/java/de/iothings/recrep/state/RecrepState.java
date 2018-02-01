@@ -74,7 +74,6 @@ public class RecrepState extends AbstractVerticle {
             eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.CONFIGURATION_UPDATE,
                     change.getNewConfiguration()));
         });
-
     }
 
     private void listenForRecrepCommands() {
@@ -85,7 +84,7 @@ public class RecrepState extends AbstractVerticle {
     private void subscribeToReqrepEvents() {
         eventSubscriber.subscribe(configurationStreamHandler, RecrepEventType.CONFIGURATION_UPDATE);
         eventSubscriber.subscribe(recordJobUpdateHandler, RecrepEventType.RECORDJOB_REQUEST,
-                RecrepEventType.RECORDJOB_STARTED, RecrepEventType.RECORDJOB_FINISHED, RecrepEventType.RECORDJOB_CANCEL_REQUEST);
+                RecrepEventType.RECORDJOB_STARTED, RecrepEventType.RECORDJOB_FINISHED, RecrepEventType.RECORDJOB_CANCEL_REQUEST, RecrepEventType.RECORDJOB_DELETE_REQUEST);
         eventSubscriber.subscribe(replayJobUpdateHandler, RecrepEventType.REPLAYJOB_REQUEST,
                 RecrepEventType.REPLAYJOB_STARTED, RecrepEventType.REPLAYJOB_FINISHED, RecrepEventType.REPLAYJOB_CANCEL_REQUEST);
     }
@@ -102,11 +101,9 @@ public class RecrepState extends AbstractVerticle {
         publishStateSnapshot();
     }
 
-
     // specific job handler
 
     private void handleRecordJobEvent(JsonObject event) {
-
          JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
 
          switch (RecrepEventType.valueOf(event.getString(RecrepEventFields.TYPE))) {
@@ -135,14 +132,17 @@ public class RecrepState extends AbstractVerticle {
                  recordJobs.put(recordJob.getString(RecrepRecordJobFields.NAME), recordJob);
                  publishStateSnapshot();
                  break;
+             case RECORDJOB_DELETE_REQUEST:
+                 //remove from record jobs
+                 recordJobs.remove(recordJob.getString(RecrepRecordJobFields.NAME));
+                 publishStateSnapshot();
+                 break;
              default:
                  //do nothing
          }
-
     }
 
     private void handleReplayJobEvent(JsonObject event) {
-
         JsonObject replayJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
 
         switch (RecrepEventType.valueOf(event.getString(RecrepEventFields.TYPE))) {
@@ -173,7 +173,6 @@ public class RecrepState extends AbstractVerticle {
         }
     }
 
-
     // Command Handler
     private void handleStateRequest(Message stateRequest) {
         stateRequest.reply(RecrepEventBuilder.createEvent(RecrepEventType.RECORDJOB_INVENTORY, createStateSnapshot()));
@@ -200,6 +199,4 @@ public class RecrepState extends AbstractVerticle {
             .put("activeReplayJobs", new ArrayList<>(activeReplayJobs.values()))
             .put("recrepConfiguration", configRetriever.getCachedConfig());
     }
-
-
 }

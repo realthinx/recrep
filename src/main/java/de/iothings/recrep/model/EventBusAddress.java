@@ -11,5 +11,6 @@ public enum EventBusAddress {
     RECREP_LOGSTREAM,
     STATE_REQUEST,
     STATE,
-    CONFIGURATION_REQUEST;
+    CONFIGURATION_REQUEST,
+    QUERY;
 }

@@ -1,5 +1,6 @@
 
 /.idea/
+/.temp/
 /target/
 /.vertx/
 /recrep.iml

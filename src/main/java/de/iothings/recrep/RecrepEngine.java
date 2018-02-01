@@ -1,9 +1,6 @@
 package de.iothings.recrep;
 
-import de.iothings.recrep.common.EndpointConfigHelper;
-import de.iothings.recrep.common.JobConfigHelper;
-import de.iothings.recrep.common.RecordLogHelper;
-import de.iothings.recrep.common.RecrepLogHelper;
+import de.iothings.recrep.common.*;
 import de.iothings.recrep.model.*;
 import de.iothings.recrep.pubsub.EventPublisher;
 import de.iothings.recrep.pubsub.EventSubscriber;
@@ -31,14 +28,18 @@ public class RecrepEngine extends AbstractVerticle {
 
     private RecrepLogHelper log;
     private RecordLogHelper recordLogHelper;
+    private RecordIndexHelper recordIndexHelper;
     private JsonObject recrepConfiguration;
 
     private final Handler<JsonObject> startRecordStreamHandler = this::startRecordStream;
+    //private final Handler<JsonObject> startRecordJobAnalysisStreamHandler = this::startRecordJobAnalysisStream;
     private final Handler<JsonObject> saveRecordJobConfigHandler = this::saveJobConfig;
     private final Handler<JsonObject> endRecordStreamHandler = this::endRecordStream;
     private final Handler<JsonObject> startReplayStreamHandler = this::startReplayStream;
     private final Handler<JsonObject> endReplayStreamHandler = this::endReplayStream;
-    private Handler<JsonObject> configurationUpdateHandler = this::handleConfigurationUpdate;
+    private final Handler<JsonObject> recordJobDeleteHandler = this::deleteRecordJob;
+    private final Handler<JsonObject> configurationUpdateHandler = this::handleConfigurationUpdate;
+
 
     private EventPublisher eventPublisher;
     private EventSubscriber eventSubscriber;
@@ -46,12 +47,19 @@ public class RecrepEngine extends AbstractVerticle {
     @Override
     public void start() throws Exception {
         log = new RecrepLogHelper(vertx, RecrepEngine.class.getName());
+
         recordLogHelper = new RecordLogHelper(vertx);
+        recordIndexHelper = new RecordIndexHelper();
+
         eventPublisher = new EventPublisher(vertx);
         eventSubscriber = new EventSubscriber(vertx, EventBusAddress.RECREP_EVENTS.toString());
+
         subscribeToReqrepEvents();
+
         initializeConfiguration();
+
         monitorResources();
+
         log.info("Started " + this.getClass().getName());
     }
 
@@ -65,7 +73,9 @@ public class RecrepEngine extends AbstractVerticle {
         eventSubscriber.subscribe(saveRecordJobConfigHandler, RecrepEventType.RECORDJOB_REQUEST);
         eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_FINISHED);
         eventSubscriber.subscribe(saveRecordJobConfigHandler, RecrepEventType.RECORDJOB_FINISHED);
+        eventSubscriber.subscribe(recordJobDeleteHandler, RecrepEventType.RECORDJOB_DELETE_REQUEST);
         //eventSubscriber.subscribe(endRecordStreamHandler, RecrepEventType.RECORDJOB_CANCEL_REQUEST);
+        //eventSubscriber.subscribe(startRecordJobAnalysisStreamHandler, RecrepEventType.RECORDJOB_ANALYSIS_REQUEST);
         eventSubscriber.subscribe(startReplayStreamHandler, RecrepEventType.REPLAYJOB_REQUEST);
         eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_FINISHED);
         eventSubscriber.subscribe(endReplayStreamHandler, RecrepEventType.REPLAYJOB_CANCEL_REQUEST);
@@ -80,7 +90,6 @@ public class RecrepEngine extends AbstractVerticle {
             recrepConfiguration = (JsonObject) configurationReply.result().body();
         });
     }
-
 
     private void startRecordStream(JsonObject event) {
 
@@ -107,7 +116,6 @@ public class RecrepEngine extends AbstractVerticle {
         }
     }
 
-
     private void endRecordStream(JsonObject event) {
         JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
         RecrepJobRegistry.unregisterRecordStreamConsumer(recordJob.getString(RecrepRecordJobFields.NAME));
@@ -115,6 +123,15 @@ public class RecrepEngine extends AbstractVerticle {
         RecrepJobRegistry.unregisterRecordJob(recordJob.getString(RecrepRecordJobFields.NAME));
         recordLogHelper.removeRecordLogger(recordJob.getString(RecrepRecordJobFields.NAME));
         eventPublisher.publish(RecrepEventBuilder.createEvent(RecrepEventType.RECORDSTREAM_ENDED, recordJob));
+    }
+
+    private void deleteRecordJob(JsonObject event) {
+        JsonObject recordJob = event.getJsonObject(RecrepEventFields.PAYLOAD);
+
+        JobConfigHelper.deleteJobConfig(recordJob);
+
+        recordLogHelper.deleteRecordLogs(recordJob);
+        recordIndexHelper.deleteRecordIndex(recordJob);
     }
 
     private void startReplayStream(JsonObject event) {
@@ -252,7 +269,7 @@ public class RecrepEngine extends AbstractVerticle {
                     JsonObject job = (JsonObject) recordJob;
                     MetricPublisher metricPublisher = RecrepJobRegistry.recordStreamMetricPublisherMap.get(job.getString(RecrepRecordJobFields.NAME));
                     if(metricPublisher != null) {
-                        metricPublisher.countResourceMetrics(recordLogHelper.getRecordLogFileSize(job), job.getString(RecrepReplayJobFields.FILE_PATH));
+                        metricPublisher.countResourceMetrics();
                     }
                 });
             });

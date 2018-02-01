@@ -4,6 +4,7 @@ import de.iothings.recrep.model.RecrepRecordJobFields;
 import de.iothings.recrep.model.RecrepReplayJobFields;
 import de.iothings.recrep.pubsub.EventPublisher;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -56,7 +57,7 @@ public class RecordLogHelper {
                 .withPattern("%d{UNIX_MILLIS}|%m%n")
                 .build();
 
-        Integer fileSize = recordJob.getInteger(RecrepRecordJobFields.MAX_SIZE_MB);
+        Integer fileSize = recordJob.getInteger(RecrepRecordJobFields.LOGGER_MAX_SIZE_MB);
         if(fileSize == null) {
             fileSize = defaultLogFileSizeMb;
         }
@@ -95,15 +96,24 @@ public class RecordLogHelper {
     public void removeRecordLogger(String recordJobName) {
         final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         final Configuration config = ctx.getConfiguration();
+        config.getAppender(recordJobName).stop();
         config.removeLogger(recordJobName);
         ctx.updateLoggers();
         log.debug("Removed log4j2 logger for record job and source: " + recordJobName);
     }
 
+    public void deleteRecordLogs(JsonObject recordJob) {
+        getRecordLogFiles(recordJob).stream().forEach(path -> {
+            try {
+                Files.delete(path);
+            } catch (IOException e) {
+                log.error("Failed to delete record log file: " + path + ": " + e.getMessage());
+            }
+        });
+    }
+
     public Stream<String> getRecordLogFileStream(JsonObject replayJob) {
-
         try {
-
             ArrayList<Path> pathArrayList = getRecordLogFiles(replayJob);
 
            return pathArrayList.stream()

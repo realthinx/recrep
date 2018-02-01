@@ -6,7 +6,7 @@
     <groupId>de.iothings.recrep</groupId>
     <artifactId>recrep</artifactId>
 
-    <version>0.0.4-SNAPSHOT</version>
+    <version>0.0.10-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>recrep</name>
@@ -22,8 +22,9 @@
         <version.metrics>3.2.2</version.metrics>
         <version.log4j>2.7</version.log4j>
         <version.junit>4.12</version.junit>
-        <version.commons.io>2.5</version.commons.io>
+        <version.commons.io>2.6</version.commons.io>
         <version.reactivestreams>1.0.0</version.reactivestreams>
+        <version.lucene>7.0.0</version.lucene>
         <pluginversion.compile>3.6.0</pluginversion.compile>
     </properties>
 
@@ -83,6 +84,23 @@
             <version>${version.log4j}</version>
         </dependency>
 
+        <!-- lucene indexing -->
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-core</artifactId>
+            <version>${version.lucene}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-analyzers-common</artifactId>
+            <version>${version.lucene}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-queryparser</artifactId>
+            <version>${version.lucene}</version>
+        </dependency>
+
         <!-- JUnit Tests-->
         <dependency>
           <groupId>junit</groupId>
@@ -96,7 +114,6 @@
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>${version.commons.io}</version>
-            <scope>test</scope>
         </dependency>
 
         <!-- vert.x unit -->

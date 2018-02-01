@@ -9,6 +9,8 @@ public class RecrepJobMetricFields {
     public static final String METRICS = "metrics";
 
     public static final String DISK_SIZE_USED = "diskSizeUsed";
+    public static final String DISK_SIZE_LOG_USED = "diskSizeLogUsed";
+    public static final String DISK_SIZE_INDEX_USED = "diskSizeIndexUsed";
     public static final String DISK_SIZE_AVAILABLE = "diskSizeAvailable";
 
     public static final String MESSAGE_COUNT = "messageCount";

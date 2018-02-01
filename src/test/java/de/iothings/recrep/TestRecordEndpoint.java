@@ -1,13 +1,18 @@
 package de.iothings.recrep;
 
+import de.iothings.recrep.common.Constants;
 import de.iothings.recrep.model.RecrepEndpointMappingFields;
 import de.iothings.recrep.model.RecrepRecordJobFields;
+import de.iothings.recrep.model.RecrepRecordMessageFields;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonObject;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Created by johannes on 17.03.17.
@@ -19,6 +24,10 @@ public class TestRecordEndpoint extends AbstractVerticle {
     @Override
     public void start() {
 
+        ArrayList<String> randomWords = new ArrayList<>(Arrays.asList(
+                "Maus", "Haus", "Auto", "Blume", "Hund", "Strasse", "Berg"
+        ));
+
         String eventBusAddress = config().getString(RecrepRecordJobFields.NAME);
         String stage = config().getString(RecrepEndpointMappingFields.STAGE);
         String sourceIdentifier = config().getString(RecrepEndpointMappingFields.SOURCE_IDENTIFIER);
@@ -26,13 +35,26 @@ public class TestRecordEndpoint extends AbstractVerticle {
 
         System.out.println("Deployed Test Record Endpoint: " + this.getClass().getName() + " - " + config().toString());
 
-        DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader("source", sourceIdentifier);
+
+
 
         timerId = vertx.setPeriodic(interval, tick -> {
+
+            int randomNum1 = ThreadLocalRandom.current().nextInt(0, 6 + 1);
+            int randomNum2 = ThreadLocalRandom.current().nextInt(0, 6 + 1);
+
+            String word1 = randomWords.get(randomNum1);
+            String word2 = randomWords.get(randomNum2);
+            DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader(RecrepRecordMessageFields.SOURCE, sourceIdentifier);
+            deliveryOptions.addHeader(RecrepRecordMessageFields.RECORDJOB_NAME, config().getString(RecrepRecordJobFields.NAME));
+            deliveryOptions.addHeader(Constants.INDEXING_HEADER_PREFIX + "word1", word1);
+            deliveryOptions.addHeader(Constants.INDEXING_HEADER_PREFIX + "word2", word2);
+
             JsonObject jsonObject = new JsonObject()
-                    .put("index",tick)
-                    .put("payload",new String(UUID.randomUUID().toString()))
-                    .put("source", sourceIdentifier);
+                    .put("id",tick)
+                    .put(RecrepRecordMessageFields.PAYLOAD, word1 + " " + word2)
+                    .put(RecrepRecordMessageFields.SOURCE, sourceIdentifier);
+
             vertx.eventBus().publish(eventBusAddress, jsonObject, deliveryOptions);
         });
     }

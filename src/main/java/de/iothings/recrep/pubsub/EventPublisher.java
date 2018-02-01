@@ -26,5 +26,4 @@ public class EventPublisher {
         vertx.eventBus().publish(EventBusAddress.RECREP_EVENTS.toString(), recrepEvent);
         log.debug("Published to: " + EventBusAddress.RECREP_EVENTS.toString() + " - Event: " + recrepEvent);
     }
-
 }
