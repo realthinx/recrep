@@ -1,11 +1,8 @@
 package de.iothings.recrep;
 
 import de.iothings.recrep.model.EventBusAddress;
-import de.iothings.recrep.model.RecrepEventFields;
-import de.iothings.recrep.model.RecrepEventType;
 import de.iothings.recrep.pubsub.EventSubscriber;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Handler;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.bridge.PermittedOptions;

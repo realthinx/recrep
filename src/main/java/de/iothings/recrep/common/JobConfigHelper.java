@@ -32,6 +32,17 @@ public class JobConfigHelper {
         }
     }
 
+    public static void deleteJobConfig(JsonObject jobDefinition) {
+        try {
+            String directory = jobDefinition.getString(RecrepRecordJobFields.FILE_PATH);
+            String jobName = jobDefinition.getString(RecrepRecordJobFields.NAME);
+            Files.delete(Paths.get(directory + File.separator + jobName + JOB_CONFIG_SUFFIX));
+            log.debug("Delete job config: " + jobDefinition.toString());
+        } catch (IOException e) {
+            log.error("Failed to delete job config file: " + e.getMessage());
+        }
+    }
+
     public static Stream<JsonObject> getJobConfigStream(String baseDirectory) {
         return  getJobConfigStream(new ArrayList<String>(Arrays.asList(new String[] { baseDirectory})));
     }

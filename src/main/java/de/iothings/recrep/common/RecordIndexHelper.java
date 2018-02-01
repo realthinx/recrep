@@ -6,10 +6,9 @@ import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.File;
+import java.nio.file.*;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,10 +28,22 @@ public class RecordIndexHelper {
         }
     }
 
-    public void deleteOldestIndex(JsonObject job) {
-
+    public void deleteRecordIndex(JsonObject job) {
+        Path indexRootPath = FileSystems.getDefault().getPath(job.getString(RecrepRecordJobFields.FILE_PATH) + "/" + job.getString(RecrepRecordJobFields.NAME));
         try {
+            Files.walk(indexRootPath, FileVisitOption.FOLLOW_LINKS)
+                    .sorted(Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    //.peek(System.out::println)
+                    .forEach(File::delete);
+        }
+        catch (Exception e) {
+            log.error("Failed to delete index directory: " + job.getString(RecrepRecordJobFields.NAME) + " - " + e.getMessage());
+        }
+    }
 
+    public void deleteOldestIndex(JsonObject job) {
+        try {
             List<Path> paths = Files.list(FileSystems.getDefault().getPath(job.getString(RecrepRecordJobFields.FILE_PATH) + "/" + job.getString(RecrepRecordJobFields.NAME)))
                     .filter(path -> path.toFile().isDirectory())
                     .collect(Collectors.toList());
@@ -44,7 +55,5 @@ public class RecordIndexHelper {
         } catch (Exception e) {
             log.error("Failed to delete index directory during housekeeping: " + e.getMessage());
         }
-
     }
-
 }
